@@ -103,6 +103,50 @@ for (const { query, matches } of [
   });
 }
 
+test("sites validators are stable and specific to the selected JSON", async ({ request }) => {
+  const tags = new Set<string>();
+  for (const query of ["", "?view=summary", "?limit=4", "?limit=4&offset=4", "?region=West"]) {
+    const path = `/api/sites${query}`;
+    const get = await request.get(path);
+    const tag = get.headers().etag;
+    expect(get.status()).toBe(200);
+    expect(tag).toMatch(/^W\/"[!#-~]+"$/);
+    expect(get.headersArray().filter(({ name }) => name.toLowerCase() === "etag")).toHaveLength(1);
+    expect(tags.has(tag)).toBe(false);
+    tags.add(tag);
+    expect((await request.get(path)).headers().etag).toBe(tag);
+    const head = await request.head(path);
+    expect(head.status()).toBe(200);
+    expect(head.headers().etag).toBe(tag);
+  }
+});
+
+test("sites revalidates GET and HEAD using complete weakly compared tags", async ({ request }) => {
+  const path = "/api/sites?view=summary&limit=4&offset=4";
+  const ordinary = await request.get(path);
+  const tag = ordinary.headers().etag;
+  const strong = tag.slice(2);
+  const other = (await request.get("/api/sites?view=summary&limit=4")).headers().etag;
+  const varyNames = (value = "") =>
+    value.toLowerCase().split(",").map((name) => name.trim()).sort();
+
+  for (const method of ["GET", "HEAD"]) {
+    for (const value of [tag, strong, `"other,tag", ${strong}, W/"stale"`, "*"]) {
+      const response = await request.fetch(path, { method, headers: { "If-None-Match": value } });
+      expect(response.status()).toBe(304);
+      expect(response.headers().etag).toBe(tag);
+      expect(varyNames(response.headers().vary)).toEqual(varyNames(ordinary.headers().vary));
+      expect(await response.text()).toBe("");
+    }
+    for (const value of [other, '"stale"', `${strong}suffix`, `${tag}, invalid`, `${tag}, *`]) {
+      const response = await request.fetch(path, { method, headers: { "If-None-Match": value } });
+      expect(response.status()).toBe(200);
+      expect(response.headers().etag).toBe(tag);
+      expect(await response.text()).toBe(method === "GET" ? await ordinary.text() : "");
+    }
+  }
+});
+
 const invalidQueries = [
   "view=",
   "view=unknown",
@@ -124,8 +168,9 @@ const invalidQueries = [
 for (const query of invalidQueries) {
   test(`sites rejects ${query} for GET and HEAD`, async ({ request }) => {
     const path = `/api/sites?${query}`;
-    const get = await request.get(path);
-    const head = await request.head(path);
+    const options = { headers: { "If-None-Match": "*" } };
+    const get = await request.get(path, options);
+    const head = await request.head(path, options);
     for (const response of [get, head]) {
       expect(response.status()).toBe(400);
       expect(response.headers()["content-type"]).toContain("application/json");

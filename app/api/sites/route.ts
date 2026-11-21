@@ -1,4 +1,20 @@
+import { createHash } from "node:crypto";
 import { filterSites, getSites, regions } from "@/lib/catalog";
+
+function matchesIfNoneMatch(value: string | null, tag: string) {
+  if (value === null) return false;
+  if (value === "*") return true;
+
+  // Commas inside quoted opaque tags are data, not list separators.
+  const member = /[ \t]*(?:(?:W\/)?("[!#-~\u0080-\u00ff]*")[ \t]*)?(?:,|$)/y;
+  let matched = false;
+  while (member.lastIndex < value.length) {
+    const match = member.exec(value);
+    if (!match) return false;
+    if (match[1] === tag) matched = true;
+  }
+  return matched;
+}
 
 async function handleSites(request: Request, head: boolean) {
   const badRequest = (error: string) =>
@@ -57,12 +73,16 @@ async function handleSites(request: Request, head: boolean) {
     if (view === "summary") next.set("view", view);
     headers.set("Link", `</api/sites?${next}>; rel="next"`);
   }
-  if (head) return new Response(null, { headers });
   const page = sites.slice(offset, end);
-  return Response.json(
-    { sites: view === "summary" ? page.map(({ description, notes, ...site }) => site) : page },
-    { headers },
-  );
+  const body = JSON.stringify({
+    sites: view === "summary" ? page.map(({ description, notes, ...site }) => site) : page,
+  });
+  const tag = `"${createHash("sha256").update(body).digest("hex")}"`;
+  headers.set("ETag", `W/${tag}`);
+  if (matchesIfNoneMatch(request.headers.get("If-None-Match"), tag)) {
+    return new Response(null, { status: 304, headers });
+  }
+  return new Response(head ? null : body, { headers });
 }
 
 export async function GET(request: Request) {
