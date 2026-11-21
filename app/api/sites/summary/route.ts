@@ -28,6 +28,19 @@ export async function GET(request: Request) {
     );
   }
 
+  for (const parameter of searchParams.keys()) {
+    if (parameter !== "state" && parameter !== "region") {
+      return Response.json(
+        {
+          code: "unknown_parameter",
+          parameter,
+          error: `The ${parameter} parameter is not supported. Use state or region.`,
+        },
+        { status: 400, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+  }
+
   const catalog = await getSites();
   const sites = catalog.filter(
     ({ state, region }) =>

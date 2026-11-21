@@ -40,6 +40,24 @@ for (const [query, summary] of [
   });
 }
 
+for (const [query, parameter] of [
+  ["regoin=West", "regoin"],
+  ["extra=1", "extra"],
+  ["state=California&extra=1", "extra"],
+]) {
+  test(`sites summary rejects unknown parameters: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?${query}`);
+    expect(response.status()).toBe(400);
+    expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(await response.json()).toEqual({
+      code: "unknown_parameter",
+      parameter,
+      error: `The ${parameter} parameter is not supported. Use state or region.`,
+    });
+  });
+}
+
 for (const [query, code] of [
   ["region=Atlantis", "invalid_filter_value"],
   ["region=west", "invalid_filter_value"],
