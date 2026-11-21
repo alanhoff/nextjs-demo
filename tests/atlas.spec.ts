@@ -11,6 +11,40 @@ test("combine catalog filters and reject unknown regions", async ({ request }) =
   expect(await invalid.json()).toMatchObject({ error: expect.any(String) });
 });
 
+test("site limits preserve complete records and apply after filtering", async ({ request }) => {
+  const catalog = await request.get("/api/sites");
+  expect(catalog.status()).toBe(200);
+  const { sites } = await catalog.json();
+  expect(sites.map((site: { code: string }) => site.code)).toEqual([
+    "JOTR",
+    "BIBE",
+    "BRCA",
+    "GRBA",
+    "DEVA",
+    "ACAD",
+  ]);
+
+  for (const [query, expected] of [
+    ["limit=2", sites.slice(0, 2)],
+    ["region=Southwest&limit=1", [sites[1]]],
+    ["region=West&q=Death%20Valley&limit=1", [sites[4]]],
+    ["region=Northeast&limit=100", [sites[5]]],
+    ["q=zzzxnomatch&limit=2", []],
+  ]) {
+    const response = await request.get(`/api/sites?${query}`);
+    expect(response.status(), query).toBe(200);
+    expect(await response.json(), query).toEqual({ sites: expected });
+  }
+});
+
+test("reject invalid or repeated site limits", async ({ request }) => {
+  for (const value of ["0", "101", "2&limit=1", "02", "", "2.0", "1e1", "%2B2", "%202%20"]) {
+    const response = await request.get(`/api/sites?limit=${value}`);
+    expect(response.status(), `limit=${value}`).toBe(400);
+    expect(await response.json()).toMatchObject({ error: expect.any(String) });
+  }
+});
+
 test("a field record can be saved, revisited, and removed", async ({ page, browser, baseURL }) => {
   await page.goto("/sites/joshua-tree");
   await page.getByRole("button", { name: "Save Joshua Tree to logbook" }).click();
