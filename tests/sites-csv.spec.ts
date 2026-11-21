@@ -26,3 +26,27 @@ test("sites CSV downloads the complete catalog in order", async ({ request }) =>
   ].join("\r\n");
   expect(await response.body()).toEqual(Buffer.from(expected, "utf8"));
 });
+
+for (const { query, rows } of [
+  {
+    query: "West",
+    rows: [
+      "JOTR,joshua-tree,Joshua Tree",
+      "GRBA,great-basin,Great Basin",
+      "DEVA,death-valley,Death Valley",
+    ],
+  },
+  {
+    query: "%20sOuThWeSt%20",
+    rows: ["BIBE,big-bend,Big Bend", "BRCA,bryce-canyon,Bryce Canyon"],
+  },
+  { query: "Atlantis", rows: [] },
+]) {
+  test(`sites CSV filters by region ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites.csv?region=${query}`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("text/csv; charset=utf-8");
+    expect(response.headers()["content-disposition"]).toBe('attachment; filename="sites.csv"');
+    expect(await response.text()).toBe(["code,slug,name", ...rows, ""].join("\r\n"));
+  });
+}
