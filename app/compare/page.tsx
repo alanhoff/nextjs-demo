@@ -19,20 +19,6 @@ async function Comparison({ searchParams }: { searchParams: Search }) {
 
   return (
     <>
-      <form action="/compare" method="get" className={styles.pair}>
-        {(["left", "right"] as const).map((side) => (
-          <div className={styles.control} key={side}>
-            <label htmlFor={side}>{side === "left" ? "Left site" : "Right site"}</label>
-            <select id={side} name={side} defaultValue={(side === "left" ? first : second)?.slug ?? ""} required>
-              <option value="">Select a site</option>
-              {sites.map((site) => (
-                <option key={site.slug} value={site.slug}>{site.name}</option>
-              ))}
-            </select>
-          </div>
-        ))}
-        <button type="submit">Compare sites</button>
-      </form>
       {pair ? (
         <section aria-label="Comparison results" className={styles.pair}>
           {pair.map((site) => (
@@ -58,6 +44,20 @@ async function Comparison({ searchParams }: { searchParams: Search }) {
               : "Select two sites to compare their viewpoints and field coordinates."}
         </p>
       )}
+      <form action="/compare" method="get" className={styles.pair}>
+        {(["left", "right"] as const).map((side) => (
+          <div className={styles.control} key={side}>
+            <label htmlFor={side}>{side === "left" ? "Left site" : "Right site"}</label>
+            <select id={side} name={side} defaultValue={(side === "left" ? first : second)?.slug ?? ""} required>
+              <option value="">Select a site</option>
+              {sites.map((site) => (
+                <option key={site.slug} value={site.slug}>{site.name}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+        <button type="submit">Compare sites</button>
+      </form>
     </>
   );
 }

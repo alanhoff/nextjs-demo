@@ -25,6 +25,16 @@ test("compare two sites from the directory on a narrow screen", async ({ page })
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 
+test("shared comparison shows site headings before the select options", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/compare?left=acadia&right=big-bend");
+  for (const name of ["Acadia", "Big Bend"]) {
+    await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
+  }
+  await expect(page.getByLabel("Left site")).toHaveValue("acadia");
+  await expect(page.getByLabel("Right site")).toHaveValue("big-bend");
+});
+
 for (const [query, message] of [
   ["left=acadia&right=acadia", "Choose two different sites"],
   ["left=typo&right=acadia", "Unknown site"],
