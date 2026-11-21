@@ -151,7 +151,8 @@ export default function Home({ searchParams }: PageProps<"/">) {
       <div className="cover-shell">
         <Cover />
       </div>
-      <section id="sites" aria-label="Site directory" className="shell directory">
+      <section id="sites" aria-labelledby="directory-label" className="shell directory">
+        <small id="directory-label">Site directory</small>
         <Suspense
           fallback={
             <div className="index-head">
