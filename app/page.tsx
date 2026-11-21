@@ -97,6 +97,7 @@ async function Directory({ searchParams }: { searchParams: Search }) {
             </Link>
           ))}
         </nav>
+        <Link href="/compare">Compare sites</Link>
         <output className="result-count">
           {matches.length} {matches.length === 1 ? "site" : "sites"}
         </output>
