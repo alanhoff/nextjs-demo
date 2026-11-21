@@ -27,6 +27,20 @@ test("sites summary filters by exact state name", async ({ request }) => {
   });
 });
 
+for (const query of ["state=California&state=Utah", "state=Maine&state=Maine", "state=&state="]) {
+  test(`sites summary rejects repeated state parameters: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?${query}`);
+    expect(response.status()).toBe(400);
+    expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(await response.json()).toEqual({
+      code: "repeated_filter",
+      parameter: "state",
+      error: "The state parameter may only be specified once.",
+    });
+  });
+}
+
 for (const state of ["Atlantis", "california", ""]) {
   test(`sites summary returns zero for state ${JSON.stringify(state)}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?state=${state}`);
