@@ -75,6 +75,8 @@ test("home search matches viewpoints case-insensitively within the selected regi
   await expect(index.getByRole("status")).toHaveText("0 sites");
 
   await index.getByRole("link", { name: "Clear filters" }).click();
+  await expect(index.getByRole("status")).toHaveText("6 sites");
+  await expect(search).toHaveValue("");
   await search.fill("Sotol Vista");
   await search.press("Enter");
   await expect(index.getByRole("status")).toHaveText("1 site");
