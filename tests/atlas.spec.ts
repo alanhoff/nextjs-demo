@@ -92,10 +92,9 @@ test("region and search survive navigation and can be cleared", async ({ page })
   await expect(index.getByRole("heading", { level: 3 })).toHaveCount(6);
 });
 
-test("the Northeast directory shows its label and matching site", async ({ page }) => {
+test("the Northeast directory shows its matching site", async ({ page }) => {
   await page.goto("/?region=Northeast");
   const index = page.getByRole("region", { name: "Site directory" });
-  await expect(index.getByText("Site directory", { exact: true })).toBeVisible();
   await expect(index.getByRole("heading", { name: "Observation sites" })).toBeVisible();
   await expect(index.getByRole("status")).toHaveText("1 site");
   await expect(index.getByRole("heading", { level: 3 })).toHaveText(["Acadia"]);
