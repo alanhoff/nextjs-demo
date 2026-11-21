@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { filterSites, getSites, regions } from "@/lib/catalog";
+import { formatSitesCsv, sitesCsvContentType } from "@/lib/sites-csv";
 
 function matchesIfNoneMatch(value: string | null, tag: string) {
   if (value === null) return false;
@@ -59,8 +60,10 @@ async function handleSites(request: Request, head: boolean) {
   }
 
   const sites = filterSites(await getSites(), region, q);
+  const csv = request.headers.get("Accept")?.toLowerCase() === "text/csv";
   const headers = new Headers({
-    "Content-Type": "application/json",
+    "Content-Type": csv ? sitesCsvContentType : "application/json",
+    Vary: "Accept",
     "X-Total-Count": String(sites.length),
   });
   const end = limit === null ? undefined : offset + Number(limit);
@@ -74,9 +77,11 @@ async function handleSites(request: Request, head: boolean) {
     headers.set("Link", `</api/sites?${next}>; rel="next"`);
   }
   const page = sites.slice(offset, end);
-  const body = JSON.stringify({
-    sites: view === "summary" ? page.map(({ description, notes, ...site }) => site) : page,
-  });
+  const body = csv
+    ? formatSitesCsv(page)
+    : JSON.stringify({
+        sites: view === "summary" ? page.map(({ description, notes, ...site }) => site) : page,
+      });
   const tag = `"${createHash("sha256").update(body).digest("hex")}"`;
   headers.set("ETag", `W/${tag}`);
   if (matchesIfNoneMatch(request.headers.get("If-None-Match"), tag)) {

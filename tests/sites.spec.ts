@@ -47,6 +47,83 @@ for (const { query, matches, offset = 0, limit } of cases) {
   });
 }
 
+test("sites negotiates only a single text/csv preference", async ({ request }) => {
+  const download = await request.get("/api/sites.csv");
+  const csv = await request.get("/api/sites", { headers: { Accept: "TeXt/CsV" } });
+  expect(csv.status()).toBe(200);
+  expect(csv.headers()["content-type"]).toBe("text/csv; charset=utf-8");
+  expect(await csv.body()).toEqual(await download.body());
+
+  for (const Accept of ["application/json", "text/plain", "text/csv, application/json"]) {
+    const response = await request.get("/api/sites", { headers: { Accept } });
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("application/json");
+    expect(await response.json()).toEqual({ sites });
+  }
+});
+
+for (const { query, matches, offset = 0, limit } of cases) {
+  test(`sites renders the selected CSV rows for /api/sites${query}`, async ({ request }) => {
+    const path = `/api/sites${query}`;
+    const headers = { Accept: "text/csv" };
+    const json = await request.get(path);
+    const csv = await request.get(path, { headers });
+    const head = await request.head(path, { headers });
+    for (const response of [csv, head]) {
+      expect(response.status()).toBe(200);
+      expect(response.headers()["content-type"]).toBe("text/csv; charset=utf-8");
+      expect(response.headers()["x-total-count"]).toBe(json.headers()["x-total-count"]);
+      expect(response.headers().link).toBe(json.headers().link);
+    }
+    const rows = matches.slice(offset, limit === undefined ? undefined : offset + limit);
+    expect(await csv.text()).toBe(
+      ["code,slug,name", ...rows.map(({ code, slug, name }) => `${code},${slug},${name}`), ""].join(
+        "\r\n",
+      ),
+    );
+    expect(await head.text()).toBe("");
+  });
+}
+
+test("sites revalidates only the negotiated representation", async ({ request }) => {
+  const path = "/api/sites?region=West&limit=2";
+  const json = await request.get(path, { headers: { Accept: "application/json" } });
+  const csv = await request.get(path, { headers: { Accept: "text/csv" } });
+  expect(csv.headers().etag).not.toBe(json.headers().etag);
+  const varyNames = (value = "") =>
+    value.toLowerCase().split(",").map((name) => name.trim()).sort();
+  expect(varyNames(csv.headers().vary)).toEqual(varyNames(json.headers().vary));
+
+  for (const { Accept, selected, other } of [
+    { Accept: "application/json", selected: json, other: csv },
+    { Accept: "text/csv", selected: csv, other: json },
+  ]) {
+    const tag = selected.headers().etag;
+    const vary = varyNames(selected.headers().vary);
+    expect(tag).toMatch(/^W\/"[!#-~]+"$/);
+    expect(vary).toContain("accept");
+    for (const method of ["GET", "HEAD"]) {
+      const matching = await request.fetch(path, {
+        method,
+        headers: { Accept, "If-None-Match": tag },
+      });
+      expect(matching.status()).toBe(304);
+      expect(matching.headers().etag).toBe(tag);
+      expect(varyNames(matching.headers().vary)).toEqual(vary);
+      expect(await matching.text()).toBe("");
+
+      const crossed = await request.fetch(path, {
+        method,
+        headers: { Accept, "If-None-Match": other.headers().etag },
+      });
+      expect(crossed.status()).toBe(200);
+      expect(crossed.headers().etag).toBe(tag);
+      expect(varyNames(crossed.headers().vary)).toEqual(vary);
+      expect(await crossed.text()).toBe(method === "GET" ? await selected.text() : "");
+    }
+  }
+});
+
 const summarize = ({ description, notes, ...site }: (typeof sites)[number]) => site;
 
 for (const { start, targets, matches, limit, summary = false } of [
@@ -168,7 +245,7 @@ const invalidQueries = [
 for (const query of invalidQueries) {
   test(`sites rejects ${query} for GET and HEAD`, async ({ request }) => {
     const path = `/api/sites?${query}`;
-    const options = { headers: { "If-None-Match": "*" } };
+    const options = { headers: { Accept: "text/csv", "If-None-Match": "*" } };
     const get = await request.get(path, options);
     const head = await request.head(path, options);
     for (const response of [get, head]) {
