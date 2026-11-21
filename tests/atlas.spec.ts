@@ -87,7 +87,7 @@ test("home search requires every word to match the same site", async ({ page }) 
   await page.goto("/?q=");
   const index = page.getByRole("region", { name: "Site directory" });
   const search = index.getByRole("searchbox", { name: "Search parks, states, and viewpoints" });
-  await expect(search).toHaveAttribute("placeholder", "Search parks, states, and viewpoints");
+  await expect(search).toHaveAttribute("placeholder", "Park, state or viewpoint");
   await expect(index.getByRole("status")).toHaveText("6 sites");
 
   for (const [query, heading, count] of [

@@ -82,7 +82,7 @@ async function Directory({ searchParams }: { searchParams: Search }) {
             name="q"
             defaultValue={q}
             maxLength={80}
-            placeholder="Search parks, states, and viewpoints"
+            placeholder="Park, state or viewpoint"
           />
           <button aria-label="Search sites" type="submit">
             <Mark name="search" size={18} />
