@@ -8,8 +8,8 @@ async function handleSites(request: Request, head: boolean) {
   const params = new URL(request.url).searchParams;
 
   for (const key of params.keys()) {
-    if (key !== "q" && key !== "region" && key !== "limit" && key !== "offset") {
-      return badRequest("Supported parameters are q, region, limit, and offset.");
+    if (!["q", "region", "limit", "offset", "view"].includes(key)) {
+      return badRequest("Supported parameters are q, region, limit, offset, and view.");
     }
     if (params.getAll(key).length > 1) {
       return badRequest(`Use the ${key} filter only once.`);
@@ -37,6 +37,11 @@ async function handleSites(request: Request, head: boolean) {
     return badRequest("offset must be a nonnegative safe integer.");
   }
 
+  const view = params.get("view");
+  if (view !== null && view !== "summary") {
+    return badRequest("view must be summary.");
+  }
+
   const sites = filterSites(await getSites(), region, q);
   const headers = new Headers({
     "Content-Type": "application/json",
@@ -49,10 +54,15 @@ async function handleSites(request: Request, head: boolean) {
     if (regionFilter) next.set("region", regionFilter);
     next.set("offset", String(end));
     next.set("limit", limit);
+    if (view === "summary") next.set("view", view);
     headers.set("Link", `</api/sites?${next}>; rel="next"`);
   }
   if (head) return new Response(null, { headers });
-  return Response.json({ sites: sites.slice(offset, end) }, { headers });
+  const page = sites.slice(offset, end);
+  return Response.json(
+    { sites: view === "summary" ? page.map(({ description, notes, ...site }) => site) : page },
+    { headers },
+  );
 }
 
 export async function GET(request: Request) {

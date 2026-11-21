@@ -47,7 +47,9 @@ for (const { query, matches, offset = 0, limit } of cases) {
   });
 }
 
-for (const { start, targets, matches, limit } of [
+const summarize = ({ description, notes, ...site }: (typeof sites)[number]) => site;
+
+for (const { start, targets, matches, limit, summary = false } of [
   {
     start: "/api/sites?limit=2&q=%20",
     targets: ["/api/sites?offset=2&limit=2", "/api/sites?offset=4&limit=2"],
@@ -59,6 +61,13 @@ for (const { start, targets, matches, limit } of [
     targets: ["/api/sites?q=California&region=West&offset=1&limit=1"],
     matches: west.filter((site) => site.state === "California"),
     limit: 1,
+  },
+  {
+    start: "/api/sites?view=summary&limit=1&region=West&q=%43alifornia",
+    targets: ["/api/sites?q=California&region=West&offset=1&limit=1&view=summary"],
+    matches: west.filter((site) => site.state === "California"),
+    limit: 1,
+    summary: true,
   },
 ]) {
   test(`sites follows next links from ${start}`, async ({ request }) => {
@@ -72,14 +81,33 @@ for (const { start, targets, matches, limit } of [
         expect(response.headers()["x-total-count"]).toBe(String(matches.length));
         expect(response.headers()["link"]).toBe(link);
       }
-      expect(await get.json()).toEqual({ sites: matches.slice(page * limit, (page + 1) * limit) });
+      const records = matches.slice(page * limit, (page + 1) * limit);
+      expect(await get.json()).toEqual({ sites: summary ? records.map(summarize) : records });
       expect(await head.text()).toBe("");
       if (target) path = get.headers()["link"].split(">", 1)[0].slice(1);
     }
   });
 }
 
+for (const { query, matches } of [
+  { query: "", matches: sites },
+  { query: "&q=Hidden%20Valley", matches: sites.filter((site) => site.viewpoint === "Hidden Valley") },
+  { query: "&q=does-not-exist-000019", matches: [] },
+]) {
+  test(`sites projects the catalog for view=summary${query}`, async ({ request }) => {
+    const get = await request.get(`/api/sites?view=summary${query}`);
+    expect(get.status()).toBe(200);
+    expect(get.headers()["x-total-count"]).toBe(String(matches.length));
+    expect(get.headers()["link"]).toBeUndefined();
+    expect(await get.json()).toEqual({ sites: matches.map(summarize) });
+  });
+}
+
 const invalidQueries = [
+  "view=",
+  "view=unknown",
+  "view=Summary",
+  "view=summary&view=summary",
   "limit=0",
   "offset=-1",
   "offset=1.5",
@@ -100,9 +128,11 @@ for (const query of invalidQueries) {
     const head = await request.head(path);
     for (const response of [get, head]) {
       expect(response.status()).toBe(400);
+      expect(response.headers()["content-type"]).toContain("application/json");
       expect(response.headers()["link"]).toBeUndefined();
       expect(response.headers()["x-total-count"]).toBeUndefined();
     }
+    expect(await get.json()).toEqual({ error: expect.any(String) });
     expect(await head.text()).toBe("");
   });
 }
