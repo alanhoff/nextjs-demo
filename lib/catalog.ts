@@ -144,6 +144,8 @@ export function filterSites(list: Site[], region = "", q = "") {
   return list.filter(
     (site) =>
       (!area || site.region.toLowerCase() === area) &&
-      (site.name.toLowerCase().includes(term) || site.state.toLowerCase().includes(term)),
+      (site.name.toLowerCase().includes(term) ||
+        site.state.toLowerCase().includes(term) ||
+        site.viewpoint.toLowerCase().includes(term)),
   );
 }

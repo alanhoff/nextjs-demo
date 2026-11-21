@@ -58,6 +58,29 @@ test("region and search survive navigation and can be cleared", async ({ page })
   await expect(index.getByRole("heading", { level: 3 })).toHaveCount(6);
 });
 
+test("home search matches viewpoints case-insensitively within the selected region", async ({
+  page,
+}) => {
+  await page.goto("/?region=Northeast");
+  const index = page.getByRole("region", { name: "Site directory" });
+  const search = index.getByRole("searchbox", { name: "Search parks or states" });
+
+  await search.fill("sAnD bEaCh");
+  await search.press("Enter");
+  await expect(index.getByRole("status")).toHaveText("1 site");
+  await expect(index.getByRole("heading", { level: 3 })).toHaveText("Acadia");
+
+  await index.getByRole("link", { name: "West", exact: true }).click();
+  await expect(index.getByRole("heading", { name: "No matching sites" })).toBeVisible();
+  await expect(index.getByRole("status")).toHaveText("0 sites");
+
+  await index.getByRole("link", { name: "Clear filters" }).click();
+  await search.fill("Sotol Vista");
+  await search.press("Enter");
+  await expect(index.getByRole("status")).toHaveText("1 site");
+  await expect(index.getByRole("heading", { level: 3 })).toHaveText("Big Bend");
+});
+
 test("an unknown site is not indexed or offered for bookmarking", async ({ page }) => {
   await page.goto("/sites/not-in-the-atlas");
   await expect(page.getByRole("heading", { name: "Site not found" })).toBeVisible();
