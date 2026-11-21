@@ -8,8 +8,8 @@ async function handleSites(request: Request, head: boolean) {
   const params = new URL(request.url).searchParams;
 
   for (const key of params.keys()) {
-    if (key !== "q" && key !== "region" && key !== "limit") {
-      return badRequest("Supported parameters are q, region, and limit.");
+    if (key !== "q" && key !== "region" && key !== "limit" && key !== "offset") {
+      return badRequest("Supported parameters are q, region, limit, and offset.");
     }
     if (params.getAll(key).length > 1) {
       return badRequest(`Use the ${key} filter only once.`);
@@ -30,10 +30,17 @@ async function handleSites(request: Request, head: boolean) {
     return badRequest("limit must be an integer from 1 to 100.");
   }
 
+  const rawOffset = params.get("offset") ?? "0";
+  const offset = Number(rawOffset);
+  if (!/^[0-9]+$/.test(rawOffset) || !Number.isSafeInteger(offset)) {
+    return badRequest("offset must be a nonnegative safe integer.");
+  }
+
   const sites = filterSites(await getSites(), region, q);
   const headers = { "Content-Type": "application/json", "X-Total-Count": String(sites.length) };
   if (head) return new Response(null, { headers });
-  return Response.json({ sites: limit === null ? sites : sites.slice(0, Number(limit)) }, { headers });
+  const end = limit === null ? undefined : offset + Number(limit);
+  return Response.json({ sites: sites.slice(offset, end) }, { headers });
 }
 
 export async function GET(request: Request) {
