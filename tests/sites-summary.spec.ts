@@ -15,3 +15,17 @@ test("sites summary counts the full catalog by state", async ({ request }) => {
   expect(sites).toHaveLength(6);
   expect(sites[0].slug).toBe("joshua-tree");
 });
+
+test("sites summary filters by exact state name", async ({ request }) => {
+  const response = await request.get("/api/sites/summary?state=California");
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({ total: 2, byState: { California: 2 } });
+});
+
+for (const state of ["Atlantis", "california", ""]) {
+  test(`sites summary returns zero for state ${JSON.stringify(state)}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?state=${state}`);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual({ total: 0, byState: {} });
+  });
+}

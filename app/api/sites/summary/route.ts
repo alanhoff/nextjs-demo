@@ -1,7 +1,9 @@
 import { getSites } from "@/lib/catalog";
 
-export async function GET() {
-  const sites = await getSites();
+export async function GET(request: Request) {
+  const stateFilter = new URL(request.url).searchParams.get("state");
+  const catalog = await getSites();
+  const sites = stateFilter === null ? catalog : catalog.filter(({ state }) => state === stateFilter);
   const byState: Record<string, number> = {};
 
   for (const { state } of sites) {
