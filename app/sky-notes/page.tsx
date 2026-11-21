@@ -91,6 +91,11 @@ async function PhaseTable({ date }: { date: string }) {
           </li>
         ))}
       </ol>
+      <p>
+        <a href={`/sky-notes/calendar.ics?date=${date}`} download>
+          Download lunar calendar
+        </a>
+      </p>
       <p className={styles.credit}>
         {archived ? "Source (offline edition): " : "Source: "}
         <a href={usno}>U.S. Naval Observatory</a>
