@@ -27,7 +27,41 @@ test("sites summary filters by exact state name", async ({ request }) => {
   });
 });
 
-for (const query of ["state=California&state=Utah", "state=Maine&state=Maine", "state=&state="]) {
+for (const [query, summary] of [
+  ["region=West", { total: 3, byState: { California: 2, Nevada: 1 }, byRegion: { West: 3 } }],
+  ["region=Southwest&state=Texas", { total: 1, byState: { Texas: 1 }, byRegion: { Southwest: 1 } }],
+  ["state=Maine&region=West", { total: 0, byState: {}, byRegion: {} }],
+  ["state=california&region=West", { total: 0, byState: {}, byRegion: {} }],
+] as const) {
+  test(`sites summary applies region and optional state: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?${query}`);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual(summary);
+  });
+}
+
+for (const [query, code] of [
+  ["region=Atlantis", "invalid_filter_value"],
+  ["region=west", "invalid_filter_value"],
+  ["region=", "invalid_filter_value"],
+  ["region=West&region=Northeast", "repeated_filter"],
+  ["region=West&region=West", "repeated_filter"],
+  ["region=&region=", "repeated_filter"],
+]) {
+  test(`sites summary rejects invalid region queries: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?${query}`);
+    expect(response.status()).toBe(400);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(await response.json()).toEqual({ code, parameter: "region", error: expect.stringMatching(/region/) });
+  });
+}
+
+for (const query of [
+  "state=California&state=Utah",
+  "state=Maine&state=Maine",
+  "state=&state=",
+  "region=West&state=&state=",
+]) {
   test(`sites summary rejects repeated state parameters: ${query}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?${query}`);
     expect(response.status()).toBe(400);
