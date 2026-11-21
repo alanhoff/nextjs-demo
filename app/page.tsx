@@ -74,7 +74,7 @@ async function Directory({ searchParams }: { searchParams: Search }) {
         <Form action="/#sites" className="search-form" key={`${q}:${region}`}>
           {region && <input type="hidden" name="region" value={region} />}
           <label className="sr-only" htmlFor="site-search">
-            Search parks or states
+            Search parks, states, and viewpoints
           </label>
           <input
             id="site-search"
@@ -82,7 +82,7 @@ async function Directory({ searchParams }: { searchParams: Search }) {
             name="q"
             defaultValue={q}
             maxLength={80}
-            placeholder="Search parks or states"
+            placeholder="Search parks, states, and viewpoints"
           />
           <button aria-label="Search sites" type="submit">
             <Mark name="search" size={18} />

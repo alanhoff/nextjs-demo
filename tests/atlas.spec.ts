@@ -39,7 +39,7 @@ test("region and search survive navigation and can be cleared", async ({ page })
   await index.getByRole("link", { name: "West", exact: true }).click();
   await expect(index.getByRole("heading", { level: 3 })).toHaveCount(3);
 
-  const search = index.getByRole("searchbox", { name: "Search parks or states" });
+  const search = index.getByRole("searchbox", { name: "Search parks, states, and viewpoints" });
   await search.fill("California");
   await search.press("Enter");
   await expect(index.getByRole("heading", { level: 3 })).toHaveText([
@@ -63,7 +63,7 @@ test("home search matches viewpoints case-insensitively within the selected regi
 }) => {
   await page.goto("/?region=Northeast");
   const index = page.getByRole("region", { name: "Site directory" });
-  const search = index.getByRole("searchbox", { name: "Search parks or states" });
+  const search = index.getByRole("searchbox", { name: "Search parks, states, and viewpoints" });
 
   await search.fill("sAnD bEaCh");
   await search.press("Enter");
@@ -81,6 +81,25 @@ test("home search matches viewpoints case-insensitively within the selected regi
   await search.press("Enter");
   await expect(index.getByRole("status")).toHaveText("1 site");
   await expect(index.getByRole("heading", { level: 3 })).toHaveText("Big Bend");
+});
+
+test("home search requires every word to match the same site", async ({ page }) => {
+  await page.goto("/?q=");
+  const index = page.getByRole("region", { name: "Site directory" });
+  const search = index.getByRole("searchbox", { name: "Search parks, states, and viewpoints" });
+  await expect(search).toHaveAttribute("placeholder", "Search parks, states, and viewpoints");
+  await expect(index.getByRole("status")).toHaveText("6 sites");
+
+  for (const [query, heading, count] of [
+    ["Maine Beach", "Acadia", "1 site"],
+    ["TEXAS   Vista", "Big Bend", "1 site"],
+    ["Maine Vista", "No matching sites", "0 sites"],
+  ]) {
+    await search.fill(query);
+    await search.press("Enter");
+    await expect(index.getByRole("status")).toHaveText(count);
+    await expect(index.getByRole("heading", { level: 3 })).toHaveText([heading]);
+  }
 });
 
 test("an unknown site is not indexed or offered for bookmarking", async ({ page }) => {

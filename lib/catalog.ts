@@ -139,13 +139,11 @@ export async function getSite(slug: string) {
 }
 
 export function filterSites(list: Site[], region = "", q = "") {
-  const term = q.trim().toLowerCase();
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
   const area = region.trim().toLowerCase();
-  return list.filter(
-    (site) =>
-      (!area || site.region.toLowerCase() === area) &&
-      (site.name.toLowerCase().includes(term) ||
-        site.state.toLowerCase().includes(term) ||
-        site.viewpoint.toLowerCase().includes(term)),
-  );
+  return list.filter((site) => {
+    if (area && site.region.toLowerCase() !== area) return false;
+    const fields = [site.name, site.state, site.viewpoint].map((field) => field.toLowerCase());
+    return words.every((word) => fields.some((field) => field.includes(word)));
+  });
 }
