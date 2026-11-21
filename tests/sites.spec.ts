@@ -47,6 +47,38 @@ for (const { query, matches, offset = 0, limit } of cases) {
   });
 }
 
+for (const { start, targets, matches, limit } of [
+  {
+    start: "/api/sites?limit=2&q=%20",
+    targets: ["/api/sites?offset=2&limit=2", "/api/sites?offset=4&limit=2"],
+    matches: sites,
+    limit: 2,
+  },
+  {
+    start: "/api/sites?limit=1&region=West&q=%43alifornia",
+    targets: ["/api/sites?q=California&region=West&offset=1&limit=1"],
+    matches: west.filter((site) => site.state === "California"),
+    limit: 1,
+  },
+]) {
+  test(`sites follows next links from ${start}`, async ({ request }) => {
+    let path = start;
+    for (const [page, target] of [...targets, undefined].entries()) {
+      const get = await request.get(path);
+      const head = await request.head(path);
+      const link = target ? `<${target}>; rel="next"` : undefined;
+      for (const response of [get, head]) {
+        expect(response.status()).toBe(200);
+        expect(response.headers()["x-total-count"]).toBe(String(matches.length));
+        expect(response.headers()["link"]).toBe(link);
+      }
+      expect(await get.json()).toEqual({ sites: matches.slice(page * limit, (page + 1) * limit) });
+      expect(await head.text()).toBe("");
+      if (target) path = get.headers()["link"].split(">", 1)[0].slice(1);
+    }
+  });
+}
+
 const invalidQueries = [
   "limit=0",
   "offset=-1",
@@ -64,9 +96,13 @@ const invalidQueries = [
 for (const query of invalidQueries) {
   test(`sites rejects ${query} for GET and HEAD`, async ({ request }) => {
     const path = `/api/sites?${query}`;
-    expect((await request.get(path)).status()).toBe(400);
+    const get = await request.get(path);
     const head = await request.head(path);
-    expect(head.status()).toBe(400);
+    for (const response of [get, head]) {
+      expect(response.status()).toBe(400);
+      expect(response.headers()["link"]).toBeUndefined();
+      expect(response.headers()["x-total-count"]).toBeUndefined();
+    }
     expect(await head.text()).toBe("");
   });
 }

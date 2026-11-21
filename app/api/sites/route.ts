@@ -17,7 +17,8 @@ async function handleSites(request: Request, head: boolean) {
   }
 
   const q = (params.get("q") ?? "").trim();
-  const region = (params.get("region") ?? "").trim().toLowerCase();
+  const regionFilter = (params.get("region") ?? "").trim();
+  const region = regionFilter.toLowerCase();
   if (params.has("region") && !regions.some((value) => value.toLowerCase() === region)) {
     return badRequest(`Choose a region: ${regions.join(", ")}.`);
   }
@@ -37,9 +38,20 @@ async function handleSites(request: Request, head: boolean) {
   }
 
   const sites = filterSites(await getSites(), region, q);
-  const headers = { "Content-Type": "application/json", "X-Total-Count": String(sites.length) };
-  if (head) return new Response(null, { headers });
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    "X-Total-Count": String(sites.length),
+  });
   const end = limit === null ? undefined : offset + Number(limit);
+  if (limit !== null && end !== undefined && end < sites.length) {
+    const next = new URLSearchParams();
+    if (q) next.set("q", q);
+    if (regionFilter) next.set("region", regionFilter);
+    next.set("offset", String(end));
+    next.set("limit", limit);
+    headers.set("Link", `</api/sites?${next}>; rel="next"`);
+  }
+  if (head) return new Response(null, { headers });
   return Response.json({ sites: sites.slice(offset, end) }, { headers });
 }
 
