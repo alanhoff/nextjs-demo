@@ -1,0 +1,172 @@
+.page {
+  width: min(1120px, 90%);
+  margin-inline: auto;
+  padding-block: clamp(48px, 8vw, 104px);
+  color: #242a22;
+}
+
+.page h1,
+.page h2,
+.page h3 {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.page h1 {
+  font-size: clamp(3.5rem, 7vw, 6rem);
+}
+.page h2 {
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+}
+.page h3 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+}
+
+.intro {
+  max-width: 48ch;
+  margin: 18px 0 clamp(32px, 5vw, 60px);
+  color: #51594d;
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.calendar {
+  padding: clamp(20px, 4.5vw, 56px);
+  color: #f8f7f2;
+  background: #243328;
+}
+
+.dateForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  margin: 26px 0 36px;
+}
+
+.dateForm label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.dateForm input,
+.dateForm button {
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid #a8b09f;
+  border-radius: 4px;
+  background: #f8f7f2;
+  color: #243328;
+  font: inherit;
+}
+
+.dateForm input {
+  color-scheme: light;
+}
+
+.dateForm button {
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dateForm button:hover {
+  background: #f8f7f2;
+  color: #243328;
+}
+
+.page :is(a, input, button):focus-visible {
+  outline: 3px solid #c89753;
+  outline-offset: 4px;
+}
+
+.table,
+.message {
+  border-top: 1px solid #737f70;
+}
+
+.message {
+  padding-top: 22px;
+  line-height: 1.6;
+}
+
+.phases {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 26px 12px;
+  padding: 28px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.phases li {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 12px;
+}
+
+.disc {
+  display: block;
+  width: clamp(38px, 5.5vw, 62px);
+  aspect-ratio: 1;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  border: 1px solid #e9e6d0;
+}
+
+.disc[data-phase="Full Moon"] {
+  background: #e9e6d0;
+}
+.disc[data-phase="First Quarter"] {
+  background: linear-gradient(to right, transparent 50%, #e9e6d0 50%);
+}
+.disc[data-phase="Last Quarter"] {
+  background: linear-gradient(to right, #e9e6d0 50%, transparent 50%);
+}
+
+.phases time,
+.credit {
+  color: #d6dbd0;
+  line-height: 1.6;
+}
+
+.credit {
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid #737f70;
+  font-size: 0.875rem;
+}
+
+.page a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 30px;
+  margin-top: clamp(40px, 7vw, 88px);
+}
+
+.field p {
+  max-width: 62ch;
+  margin: 12px 0 30px;
+  color: #51594d;
+  line-height: 1.65;
+}
+
+@media (max-width: 620px) {
+  .phases {
+    grid-template-columns: 1fr 1fr;
+  }
+  .field {
+    grid-template-columns: 1fr;
+  }
+}

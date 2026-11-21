@@ -1,0 +1,11 @@
+.git
+.github
+.next
+node_modules
+test-results
+playwright-report
+*.tsbuildinfo
+next-env.d.ts
+.env*
+docs
+README.md
