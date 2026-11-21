@@ -89,6 +89,9 @@ async function Directory({ searchParams }: { searchParams: Search }) {
           </button>
         </Form>
       </div>
+      <p>
+        <Link href="/compare">Compare sites</Link>
+      </p>
       <div className="index-tools">
         <nav aria-label="Filter by region" className="region-links">
           {["", ...regions].map((r) => (

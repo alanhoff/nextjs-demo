@@ -1,0 +1,61 @@
+.page {
+  max-width: 960px;
+  padding-block: 48px;
+}
+.page h1 {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+}
+.form,
+.results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.form {
+  margin-block: 24px;
+}
+.form label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 650;
+}
+.form select,
+.form button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+}
+.form select {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+}
+.form select:focus-visible {
+  outline: 3px solid #ae742e;
+  outline-offset: 4px;
+}
+.form button {
+  justify-self: start;
+  color: var(--paper);
+  background: var(--ink);
+}
+.results article {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+.results dt {
+  font-weight: 650;
+}
+.results dd {
+  margin: 0 0 12px;
+}
+@media (max-width: 620px) {
+  .form,
+  .results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
