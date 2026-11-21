@@ -1,12 +1,13 @@
 import { expect, test } from "@playwright/test";
 
-test("sites summary counts the full catalog by state", async ({ request }) => {
+test("sites summary counts the full catalog by state and region", async ({ request }) => {
   const response = await request.get("/api/sites/summary");
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
   expect(await response.json()).toEqual({
     total: 6,
     byState: { California: 2, Maine: 1, Nevada: 1, Texas: 1, Utah: 1 },
+    byRegion: { West: 3, Southwest: 2, Northeast: 1 },
   });
 
   const catalog = await request.get("/api/sites");
@@ -19,13 +20,17 @@ test("sites summary counts the full catalog by state", async ({ request }) => {
 test("sites summary filters by exact state name", async ({ request }) => {
   const response = await request.get("/api/sites/summary?state=California");
   expect(response.status()).toBe(200);
-  expect(await response.json()).toEqual({ total: 2, byState: { California: 2 } });
+  expect(await response.json()).toEqual({
+    total: 2,
+    byState: { California: 2 },
+    byRegion: { West: 2 },
+  });
 });
 
 for (const state of ["Atlantis", "california", ""]) {
   test(`sites summary returns zero for state ${JSON.stringify(state)}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?state=${state}`);
     expect(response.status()).toBe(200);
-    expect(await response.json()).toEqual({ total: 0, byState: {} });
+    expect(await response.json()).toEqual({ total: 0, byState: {}, byRegion: {} });
   });
 }
