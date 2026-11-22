@@ -1,4 +1,25 @@
+import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
+
+const guidePath = "/guides/catalog-summary.md";
+
+test("the canonical catalog summary guide serves the original Markdown", async ({ request }) => {
+  const response = await request.get(guidePath, { maxRedirects: 0 });
+  expect(response.status()).toBe(200);
+  expect(createHash("sha256").update(await response.body()).digest("hex")).toBe(
+    "24328648705f2607dd02f719ba7d33ee8803fd53bd331d949eba74323d8d0e5f",
+  );
+});
+
+for (const query of ["", "?from=release&reader=night"]) {
+  test(`the legacy catalog summary guide redirects permanently: ${query || "no query"}`, async ({
+    request,
+  }) => {
+    const response = await request.get(`/catalog-summary.md${query}`, { maxRedirects: 0 });
+    expect(response.status()).toBe(308);
+    expect(response.headers().location).toBe(`${guidePath}${query}`);
+  });
+}
 
 test("sites summary counts the full catalog by state and region", async ({ request }) => {
   const response = await request.get("/api/sites/summary");

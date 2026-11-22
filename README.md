@@ -51,7 +51,7 @@ The API returns `{"sites":[...]}`, including an empty array for no matches. Both
 
 Import the [OpenAPI 3.1.1 description](public/openapi.json), served by the app at `/openapi.json`, to discover and call the public API.
 
-For aggregate counts instead of site records, see the [catalog summary API guide](public/catalog-summary.md), served by the app at `/catalog-summary.md`.
+For aggregate counts instead of site records, see the [catalog summary API guide](public/guides/catalog-summary.md), served by the app at `/guides/catalog-summary.md`.
 
 ## Verify a change
 
