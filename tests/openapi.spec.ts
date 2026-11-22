@@ -59,13 +59,23 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   expect(spec.components.schemas.NearbySite.required).toEqual(["slug", "distanceKm"]);
   expect(spec.components.schemas.CatalogSummary.required).toEqual(["total", "byState", "byRegion"]);
   expect(spec.paths["/api/sites/summary"].get.responses["400"].content["application/json"].schema.$ref).toBe("#/components/schemas/FilterError");
+  expect(spec.components.parameters.IfNoneMatch).toMatchObject({
+    name: "If-None-Match",
+    in: "header",
+    required: false,
+  });
   for (const path of ["/api/sites.csv", "/api/sites.geojson"]) {
     const { parameters, responses } = spec.paths[path].get;
     expect(parameters).toEqual([
       { $ref: "#/components/parameters/ExportRegion" },
       { $ref: "#/components/parameters/CatalogState" },
+      { $ref: "#/components/parameters/IfNoneMatch" },
     ]);
-    expect(Object.keys(responses)).toEqual(["200", "400"]);
+    expect(Object.keys(responses)).toEqual(["200", "304", "400"]);
+    for (const status of ["200", "304"]) {
+      expect(responses[status].headers.ETag).toEqual({ $ref: "#/components/headers/ETag" });
+    }
+    expect(responses["304"]).not.toHaveProperty("content");
     expect(responses["400"].description).toBe("Repeated state parameter: Use the state filter only once.");
     expect(responses["400"].content["application/json"].schema.$ref).toBe("#/components/schemas/Error");
   }
