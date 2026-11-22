@@ -72,6 +72,9 @@ export default async function SitePage({ params }: Props) {
               /go/{site.code}
             </Link>
           </p>
+          <Link className={styles.source} href={`/compare?left=${site.slug}`}>
+            Compare this site
+          </Link>
         </div>
         <div className={styles.notes}>
           <p className={styles.lede}>{site.description}</p>

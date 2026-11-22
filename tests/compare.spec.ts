@@ -1,5 +1,30 @@
 import { expect, test } from "@playwright/test";
 
+for (const { slug, width, height } of [
+  { slug: "acadia", width: 390, height: 844 },
+  { slug: "death-valley", width: 1440, height: 900 },
+]) {
+  test(`keyboard users can compare ${slug} at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.goto(`/sites/${slug}`);
+    const link = page.getByRole("link", { name: "Compare this site", exact: true });
+    await expect(link).toBeVisible();
+
+    for (let step = 0; step < 20; step++) {
+      await page.keyboard.press("Tab");
+      if (await link.evaluate((element) => element === document.activeElement)) break;
+    }
+    await expect(link).toBeFocused();
+    await expect(link).toHaveCSS("outline-style", "solid");
+    await expect(link).toHaveCSS("outline-width", "3px");
+    await page.keyboard.press("Enter");
+
+    await expect(page).toHaveURL(`/compare?left=${slug}`);
+    await expect(page.getByRole("heading", { name: "Compare sites" })).toBeVisible();
+    await expect(page.getByLabel("Left site")).toHaveValue(slug);
+  });
+}
+
 test("the directory leads to a shareable comparison on a narrow screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
