@@ -37,15 +37,17 @@ curl -I -H 'Accept: text/csv' "$page"
 
 ## Revalidate the same representation
 
-Store the response body and its ETag together for the exact page URL and
-selected format. Copy the full ETag, including `W/` and the quotes. For example,
-fetch CSV, then paste the returned CSV ETag in place of `PASTE_CSV_TAG_HERE`
-(replace only that text, leaving the prefix and quotes intact):
+Run these commands from a writable directory. The first GET saves the CSV body
+and its ETag separately and prints the HTTP status (`200`). The second GET
+reads that same tag file and sends the validator unchanged in `If-None-Match`.
+It prints the response headers, including the status line, and any body without
+overwriting the saved CSV.
 
 ```sh
-curl -i -H 'Accept: text/csv' "$page"
-curl -i -H 'Accept: text/csv' \
-  -H 'If-None-Match: W/"PASTE_CSV_TAG_HERE"' "$page"
+page="$BASE_URL/api/sites?state=California&limit=1"
+curl -sS -H 'Accept: text/csv' --etag-save catalog-page.etag \
+  -o catalog-page.csv -w 'HTTP %{http_code}\n' "$page"
+curl -i -H 'Accept: text/csv' --etag-compare catalog-page.etag "$page"
 ```
 
 If the validator still matches, the conditional GET returns `304 Not Modified`
