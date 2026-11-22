@@ -8,7 +8,10 @@ const methods = /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)$/;
 function handlerInventory(directory = "app/api", route = "/api"): [string, string[]][] {
   return readdirSync(directory, { withFileTypes: true }).flatMap<[string, string[]]>((entry) => {
     const path = join(directory, entry.name);
-    if (entry.isDirectory()) return handlerInventory(path, `${route}/${entry.name}`);
+    if (entry.isDirectory()) {
+      const segment = entry.name.replace(/^\[([^\[\].]+)\]$/, "{$1}");
+      return handlerInventory(path, `${route}/${segment}`);
+    }
     if (entry.name !== "route.ts") return [];
 
     const source = readFileSync(path, "utf8");
@@ -30,6 +33,17 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   const spec = await response.json();
   expect(spec.openapi).toBe("3.1.1");
   expect(Object.fromEntries(Object.entries(spec.paths).map(([path, operations]) => [path, Object.keys(operations as object).sort()]))).toEqual(Object.fromEntries(handlerInventory()));
+
+  const detail = spec.paths["/api/sites/{slug}"].get;
+  expect(detail.parameters).toMatchObject([
+    { name: "slug", in: "path", required: true, schema: { type: "string" } },
+  ]);
+  expect(detail.responses["200"].content["application/json"].schema).toEqual({
+    $ref: "#/components/schemas/Site",
+  });
+  expect(detail.responses["404"].content["application/json"].schema).toEqual({
+    $ref: "#/components/schemas/Error",
+  });
 
   const catalog = spec.paths["/api/sites"];
   for (const method of ["get", "head"]) {
@@ -100,6 +114,7 @@ test("published OpenAPI gives every explicit handler a stable, unique operation 
     "GET /api/nearby": "getNearbySites",
     "GET /api/sites": "listSites",
     "HEAD /api/sites": "headSites",
+    "GET /api/sites/{slug}": "getSite",
     "GET /api/sites.csv": "exportSitesCsv",
     "GET /api/sites.geojson": "exportSitesGeoJson",
     "GET /api/sites/exports": "listSiteExports",
@@ -129,6 +144,7 @@ test("published OpenAPI groups every explicit handler by purpose", async ({ requ
     "GET /api/nearby": ["Discovery"],
     "GET /api/sites": ["Catalog"],
     "HEAD /api/sites": ["Catalog"],
+    "GET /api/sites/{slug}": ["Catalog"],
     "GET /api/sites.csv": ["Exports"],
     "GET /api/sites.geojson": ["Exports"],
     "GET /api/sites/exports": ["Exports"],

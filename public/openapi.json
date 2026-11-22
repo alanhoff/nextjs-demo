@@ -71,6 +71,20 @@
         }
       }
     },
+    "/api/sites/{slug}": {
+      "get": {
+        "operationId": "getSite",
+        "tags": ["Catalog"],
+        "summary": "Get one catalog site by its published slug",
+        "parameters": [
+          { "name": "slug", "in": "path", "required": true, "description": "Exact, case-sensitive catalog slug.", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "The complete catalog site.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "404": { "description": "Site not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
     "/api/sites.csv": {
       "get": {
         "operationId": "exportSitesCsv",
