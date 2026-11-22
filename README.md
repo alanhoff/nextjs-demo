@@ -49,6 +49,8 @@ curl -I 'http://localhost:3000/go/jOtR?from=field-notes'
 
 The API returns `{"sites":[...]}`, including an empty array for no matches. Both filters are optional and case-insensitive. `q` searches park and state names (80 characters maximum); `region` accepts West, Southwest, or Northeast. Invalid, repeated, and unknown parameters return HTTP 400 and an `error` message.
 
+Import the [OpenAPI 3.1.1 description](public/openapi.json), served by the app at `/openapi.json`, to discover and call the public API.
+
 For aggregate counts instead of site records, see the [catalog summary API guide](public/catalog-summary.md), served by the app at `/catalog-summary.md`.
 
 ## Verify a change
