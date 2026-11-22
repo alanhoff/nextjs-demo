@@ -48,3 +48,29 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   }
   expect(spec.components.parameters.ExportRegion).toMatchObject({ style: "form", explode: true, schema: { type: "array" } });
 });
+
+test("published search constraints match the handlers' trimmed UTF-16 limit", async ({ request }) => {
+  const response = await request.get("/openapi.json");
+  expect(response.status()).toBe(200);
+  const spec = await response.json();
+  const schema = spec.components.parameters.Search.schema as {
+    pattern: string;
+    allOf?: { pattern: string }[];
+  };
+  const patterns = [schema, ...(schema.allOf ?? [])].map(({ pattern }) => new RegExp(pattern, "u"));
+
+  for (const [text, status] of [
+    ["😀".repeat(40), 200],
+    ["😀".repeat(41), 400],
+    [`${"a".repeat(78)}😀`, 200],
+    [`${"a".repeat(78)} 😀`, 400],
+    ["a".repeat(81), 400],
+  ] as const) {
+    const q = `\t ${text} \u00a0`;
+    expect(patterns.every((pattern) => pattern.test(q)), `schema for ${text}`).toBe(status === 200);
+    for (const path of ["/api/sites", "/api/sites/summary"]) {
+      const result = await request.get(path, { params: { q } });
+      expect(result.status(), `${path} for ${text}`).toBe(status);
+    }
+  }
+});
