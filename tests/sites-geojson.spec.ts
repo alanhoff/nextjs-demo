@@ -29,6 +29,44 @@ test("sites GeoJSON maps the complete catalog to points in order", async ({ requ
   );
 });
 
+for (const [query, codes] of [
+  ["state=Maine", ["ACAD"]],
+  ["region=West&state=California", ["JOTR", "DEVA"]],
+  ["region=Northeast&state=Texas", []],
+  ["state=Maine&region=West&region=Northeast&q=ignored", ["ACAD"]],
+  ["state=", []],
+  ["state=Atlantis", []],
+  ["state=maine", []],
+  ["state=%20Maine%20", []],
+] as const) {
+  test(`standalone exports filter sites for ${query}`, async ({ request }) => {
+    const selected = sites.filter(({ code }) => codes.some((expected) => expected === code));
+    const csv = await request.get(`/api/sites.csv?${query}`);
+    expect(csv.status()).toBe(200);
+    expect(csv.headers()["content-type"]).toBe("text/csv; charset=utf-8");
+    expect(csv.headers()["content-disposition"]).toBe('attachment; filename="sites.csv"');
+    expect(await csv.text()).toBe(
+      ["code,slug,name", ...selected.map(({ code, slug, name }) => `${code},${slug},${name}`), ""].join(
+        "\r\n",
+      ),
+    );
+
+    const geojson = await request.get(`/api/sites.geojson?${query}`);
+    expect(geojson.status()).toBe(200);
+    expect(geojson.headers()["content-type"]).toBe("application/geo+json");
+    expect(await geojson.json()).toEqual(featureCollection(selected));
+  });
+}
+
+for (const format of ["csv", "geojson"]) {
+  test(`sites ${format} rejects repeated state`, async ({ request }) => {
+    const response = await request.get(`/api/sites.${format}?state=Maine&state=Maine`);
+    expect(response.status()).toBe(400);
+    expect(response.headers()["content-type"]).toBe("application/json");
+    expect(await response.json()).toEqual({ error: "Use the state filter only once." });
+  });
+}
+
 for (const [query, region] of [
   ["West", "West"],
   ["%20sOuThWeSt%20", "Southwest"],

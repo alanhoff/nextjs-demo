@@ -75,12 +75,12 @@
         "operationId": "exportSitesCsv",
         "tags": ["Exports"],
         "summary": "Download the catalog as CSV",
-        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }],
+        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }],
         "responses": { "200": {
           "description": "CSV attachment, with a header row even when no sites match.",
           "headers": { "Content-Disposition": { "schema": { "type": "string", "const": "attachment; filename=\"sites.csv\"" } } },
           "content": { "text/csv": { "schema": { "$ref": "#/components/schemas/SitesCsv" } } }
-        } }
+        }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
       }
     },
     "/api/sites.geojson": {
@@ -88,8 +88,8 @@
         "operationId": "exportSitesGeoJson",
         "tags": ["Exports"],
         "summary": "Export catalog viewing spots as GeoJSON points",
-        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }],
-        "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } } }
+        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }],
+        "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
       }
     },
     "/api/sites/exports": {
@@ -193,7 +193,7 @@
         }
       },
       "CatalogRegion": { "name": "region", "in": "query", "required": false, "description": "West, Southwest or Northeast, ignoring case and outer whitespace. Empty or unmatched values are invalid.", "schema": { "type": "string", "pattern": "^\\s*(?:[Ww][Ee][Ss][Tt]|[Ss][Oo][Uu][Tt][Hh][Ww][Ee][Ss][Tt]|[Nn][Oo][Rr][Tt][Hh][Ee][Aa][Ss][Tt])\\s*$" } },
-      "ExportRegion": { "name": "region", "in": "query", "required": false, "style": "form", "explode": true, "description": "One occurrence filters by region ignoring case and outer whitespace; an empty or unmatched value returns no sites. Omission or multiple occurrences return the full catalog. Other query parameters are ignored.", "schema": { "type": "array", "items": { "type": "string" } }, "example": ["West"] },
+      "ExportRegion": { "name": "region", "in": "query", "required": false, "style": "form", "explode": true, "description": "One occurrence filters by region ignoring case and outer whitespace; an empty or unmatched value returns no sites. Omission or multiple occurrences impose no region restriction. When state is supplied, both filters must match. Unrelated query parameters are ignored.", "schema": { "type": "array", "items": { "type": "string" } }, "example": ["West"] },
       "Limit": { "name": "limit", "in": "query", "required": false, "description": "Maximum page size, written as decimal digits without leading zeros. Omit to return all remaining matches.", "schema": { "type": "integer", "minimum": 1, "maximum": 100 } },
       "Offset": { "name": "offset", "in": "query", "required": false, "description": "Number of matching sites to skip, written as unsigned decimal digits.", "schema": { "type": "integer", "minimum": 0, "maximum": 9007199254740991, "default": 0 } },
       "View": { "name": "view", "in": "query", "required": false, "description": "Use summary to omit description and notes from JSON records. Omit for full records.", "schema": { "type": "string", "const": "summary" } },
