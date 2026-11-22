@@ -291,13 +291,6 @@ h3 {
   gap: 12px 16px;
   margin-bottom: 12px;
 }
-#sites .catalog-actions a {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  max-width: 100%;
-  padding-inline: 4px;
-}
 .index-tools {
   padding: 0 0 18px;
 }
@@ -322,6 +315,13 @@ h3 {
 }
 .region-links a:hover:not([aria-current]) {
   background: #eaeadd;
+}
+#sites .catalog-actions a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  max-width: 100%;
+  padding-inline: 4px;
 }
 .result-count {
   color: var(--muted);
