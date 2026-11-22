@@ -8,6 +8,8 @@ test("sitemap lists exactly the canonical public page URLs", async ({ request })
   expect(response.headers()["content-type"]).toMatch(/^application\/xml(?:;|$)/i);
 
   const xml = await response.text();
+  expect(xml).not.toContain("?");
+  expect(xml).not.toContain("#");
   const urls = Array.from(xml.matchAll(/<loc>([^<]*)<\/loc>/g), ([, url]) => url);
   const expectedUrls = [
     "/",
