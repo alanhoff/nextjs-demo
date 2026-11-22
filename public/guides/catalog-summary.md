@@ -44,3 +44,17 @@ Validation errors return JSON with a machine-readable `code`, the offending `par
 - [`byRegion` response field](https://github.com/alanhoff/nextjs-demo/commit/241a81ee0b90eb954ba773510a2943eac79c3e0b)
 - [`region` filtering](https://github.com/alanhoff/nextjs-demo/commit/3220c9de98bb69773ab73799951b679494198599)
 - [`q` text search](https://github.com/alanhoff/nextjs-demo/commit/28d500dd56dbd4154fbdb827f3a4b2f459a9d9fe)
+
+## Client compatibility
+
+| Version | `?state=Maine&state=Utah` | `?limit=1` |
+| --- | --- | --- |
+| [241a81e](https://github.com/alanhoff/nextjs-demo/blob/241a81ee0b90eb954ba773510a2943eac79c3e0b/app/api/sites/summary/route.ts) | HTTP 200; uses the first value (`Maine`) only. | HTTP 200; ignores `limit` and summarizes the full catalog. |
+| [5642ccf](https://github.com/alanhoff/nextjs-demo/blob/5642ccfc864cdf936e39f70d0270e285710cbf1c/app/api/sites/summary/route.ts) | HTTP 400; `repeated_filter` for `state`. | HTTP 200; ignores `limit` and summarizes the full catalog. |
+| [6551ef7](https://github.com/alanhoff/nextjs-demo/blob/6551ef78362c23fc735e84758c1a515a706721e4/app/api/sites/summary/route.ts) | HTTP 400; `repeated_filter` for `state`. | HTTP 400; `unknown_parameter` for `limit`. |
+| Today | HTTP 400; `repeated_filter` for `state`. | HTTP 400; `unknown_parameter` for `limit`. |
+
+- At `6551ef7`: “The limit parameter is not supported. Use state or region.”
+- Today: “The limit parameter is not supported. Use state, region, or q.”
+
+Branch on `code` and `parameter`, not the English `error` text.

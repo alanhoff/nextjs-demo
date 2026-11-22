@@ -3,11 +3,17 @@ import { expect, test } from "@playwright/test";
 
 const guidePath = "/guides/catalog-summary.md";
 
-test("the canonical catalog summary guide serves the original Markdown", async ({ request }) => {
+test("the canonical catalog summary guide preserves the original Markdown and documents client compatibility", async ({ request }) => {
   const response = await request.get(guidePath, { maxRedirects: 0 });
   expect(response.status()).toBe(200);
-  expect(await response.text()).toContain("## HTTP 400 errors");
-  expect(createHash("sha256").update(await response.body()).digest("hex")).toBe(
+  const [original, compatibility] = (await response.text()).split("\n## Client compatibility\n");
+  expect(original).toContain("## HTTP 400 errors");
+  expect(compatibility).toContain("| Version | `?state=Maine&state=Utah` | `?limit=1` |");
+  expect(compatibility).toContain("| Today | HTTP 400; `repeated_filter` for `state`. | HTTP 400; `unknown_parameter` for `limit`. |");
+  expect(compatibility).toContain("At `6551ef7`: “The limit parameter is not supported. Use state or region.”");
+  expect(compatibility).toContain("Today: “The limit parameter is not supported. Use state, region, or q.”");
+  expect(compatibility).toContain("Branch on `code` and `parameter`, not the English `error` text.");
+  expect(createHash("sha256").update(original).digest("hex")).toBe(
     "24328648705f2607dd02f719ba7d33ee8803fd53bd331d949eba74323d8d0e5f",
   );
 });
