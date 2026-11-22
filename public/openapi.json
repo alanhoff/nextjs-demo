@@ -107,6 +107,19 @@
         "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } }, "304": { "description": "The selected representation matches If-None-Match. No body.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
       }
     },
+    "/api/sites.ndjson": {
+      "get": {
+        "operationId": "exportSitesNdjson",
+        "tags": ["Exports"],
+        "summary": "Download the full catalog as newline-delimited JSON",
+        "responses": {
+          "200": {
+            "description": "UTF-8 text with one compact Site object per line in catalog order, including a final LF. No enclosing array.",
+            "content": { "application/x-ndjson": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
     "/api/sites/exports": {
       "get": {
         "operationId": "listSiteExports",
@@ -116,9 +129,9 @@
           "type": "object", "required": ["catalog", "formats"], "properties": {
             "catalog": { "const": "night-atlas" },
             "formats": { "type": "array", "items": { "type": "object", "required": ["id", "path", "media_type"], "properties": {
-              "id": { "type": "string", "enum": ["json", "csv", "geojson"] },
+              "id": { "type": "string", "enum": ["json", "csv", "geojson", "ndjson"] },
               "path": { "type": "string", "format": "uri-reference" },
-              "media_type": { "type": "string", "enum": ["application/json", "text/csv", "application/geo+json"] }
+              "media_type": { "type": "string", "enum": ["application/json", "text/csv", "application/geo+json", "application/x-ndjson"] }
             } } }
           }
         } } } } }

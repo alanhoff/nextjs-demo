@@ -34,6 +34,13 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   expect(spec.openapi).toBe("3.1.1");
   expect(Object.fromEntries(Object.entries(spec.paths).map(([path, operations]) => [path, Object.keys(operations as object).sort()]))).toEqual(Object.fromEntries(handlerInventory()));
 
+  const ndjson = spec.paths["/api/sites.ndjson"].get;
+  expect(ndjson.responses["200"].content["application/x-ndjson"].schema).toEqual({ type: "string" });
+  const registry = spec.paths["/api/sites/exports"].get.responses["200"].content["application/json"].schema;
+  const descriptor = registry.properties.formats.items.properties;
+  expect(descriptor.id.enum).toContain("ndjson");
+  expect(descriptor.media_type.enum).toContain("application/x-ndjson");
+
   const detail = spec.paths["/api/sites/{slug}"].get;
   expect(detail.parameters).toMatchObject([
     { name: "slug", in: "path", required: true, schema: { type: "string" } },
@@ -117,6 +124,7 @@ test("published OpenAPI gives every explicit handler a stable, unique operation 
     "GET /api/sites/{slug}": "getSite",
     "GET /api/sites.csv": "exportSitesCsv",
     "GET /api/sites.geojson": "exportSitesGeoJson",
+    "GET /api/sites.ndjson": "exportSitesNdjson",
     "GET /api/sites/exports": "listSiteExports",
     "GET /api/sites/status": "getSiteStatus",
     "GET /api/sites/summary": "getSiteSummary",
@@ -147,6 +155,7 @@ test("published OpenAPI groups every explicit handler by purpose", async ({ requ
     "GET /api/sites/{slug}": ["Catalog"],
     "GET /api/sites.csv": ["Exports"],
     "GET /api/sites.geojson": ["Exports"],
+    "GET /api/sites.ndjson": ["Exports"],
     "GET /api/sites/exports": ["Exports"],
     "GET /api/sites/status": ["Catalog"],
     "GET /api/sites/summary": ["Discovery"],
