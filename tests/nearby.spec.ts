@@ -3,11 +3,32 @@ import { expect, test } from "@playwright/test";
 test("nearby sites are ranked by distance from the catalog viewpoint", async ({ request }) => {
   const response = await request.get("/api/nearby?lat=34.011&lon=-116.168&limit=2");
   expect(response.ok()).toBe(true);
+  expect(await response.text()).toBe(
+    '{"sites":[{"slug":"joshua-tree","distanceKm":0},{"slug":"death-valley","distanceKm":301}]}',
+  );
+});
+
+test("nearby identity adds only code and name without changing rank or distance", async ({ request }) => {
+  const response = await request.get("/api/nearby?lat=34.011&lon=-116.168&limit=2&view=identity");
+  expect(response.status()).toBe(200);
   expect(await response.json()).toEqual({
     sites: [
-      { slug: "joshua-tree", distanceKm: 0 },
-      { slug: "death-valley", distanceKm: 301 },
+      { slug: "joshua-tree", code: "JOTR", name: "Joshua Tree", distanceKm: 0 },
+      { slug: "death-valley", code: "DEVA", name: "Death Valley", distanceKm: 301 },
     ],
+  });
+});
+
+test("nearby identity still filters by unrounded distance", async ({ request }) => {
+  const viewpoint = "/api/nearby?lat=34.012&lon=-116.168&view=identity";
+  const outside = await request.get(`${viewpoint}&radius_km=0.05`);
+  expect(outside.status()).toBe(200);
+  expect(await outside.json()).toEqual({ sites: [] });
+
+  const inside = await request.get(`${viewpoint}&radius_km=0.2`);
+  expect(inside.status()).toBe(200);
+  expect(await inside.json()).toEqual({
+    sites: [{ slug: "joshua-tree", code: "JOTR", name: "Joshua Tree", distanceKm: 0 }],
   });
 });
 
@@ -43,6 +64,11 @@ test("nearby lists supported parameters for unknown query names", async ({ reque
 });
 
 for (const query of [
+  "lat=0&lon=0&view=",
+  "lat=0&lon=0&view=unknown",
+  "lat=0&lon=0&view=Identity",
+  "lat=0&lon=0&view=identity%20",
+  "lat=0&lon=0&view=identity&view=identity",
   "lat=20",
   "lon=0",
   "lat=&lon=0",

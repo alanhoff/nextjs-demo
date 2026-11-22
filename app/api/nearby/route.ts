@@ -26,7 +26,7 @@ function coordinate(value: string | null, max: number) {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   for (const key of params.keys()) {
-    if (key !== "lat" && key !== "lon" && key !== "limit" && key !== "radius_km") {
+    if (key !== "lat" && key !== "lon" && key !== "limit" && key !== "radius_km" && key !== "view") {
       return Response.json(
         { error: "Supported parameters are lat, lon, limit and radius_km." },
         { status: 400 },
@@ -61,12 +61,22 @@ export async function GET(request: Request) {
     );
   }
 
+  const view = params.get("view");
+  if (view !== null && view !== "identity") {
+    return Response.json({ error: "view must be identity." }, { status: 400 });
+  }
+
   const sites = catalog
-    .map(({ slug, coordinates }) => ({ slug, distanceKm: distanceKm(lat, lon, coordinates) }))
+    .map(({ slug, code, name, coordinates }) => ({ slug, code, name, distanceKm: distanceKm(lat, lon, coordinates) }))
     .filter(({ distanceKm }) => radiusKm === null || distanceKm <= radiusKm)
     .sort((a, b) => a.distanceKm - b.distanceKm)
     .slice(0, limit)
-    .map(({ slug, distanceKm }) => ({ slug, distanceKm: Math.round(distanceKm) }));
+    .map(({ slug, code, name, distanceKm }) => {
+      const roundedDistanceKm = Math.round(distanceKm);
+      return view === "identity"
+        ? { slug, code, name, distanceKm: roundedDistanceKm }
+        : { slug, distanceKm: roundedDistanceKm };
+    });
 
   return Response.json({ sites });
 }
