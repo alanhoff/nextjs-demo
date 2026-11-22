@@ -1,20 +1,29 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getSites } from "@/lib/catalog";
 import styles from "./compare.module.css";
 
-export const metadata = {
-  title: "Compare sites",
-  alternates: { canonical: "/compare" },
-};
-
 type Search = PageProps<"/compare">["searchParams"];
 
-async function Comparison({ searchParams }: { searchParams: Search }) {
+async function resolveComparison(searchParams: Search) {
   const [{ left, right }, sites] = await Promise.all([searchParams, getSites()]);
   const first = sites.find((site) => site.slug === left);
   const second = sites.find((site) => site.slug === right);
   const unknown = (left && !first) || (right && !second);
   const duplicate = first && second && first.slug === second.slug;
+  return { sites, first, second, unknown, duplicate };
+}
+
+export async function generateMetadata({ searchParams }: PageProps<"/compare">): Promise<Metadata> {
+  const { first, second, duplicate } = await resolveComparison(searchParams);
+  return {
+    title: first && second && !duplicate ? `${first.name} vs. ${second.name}` : "Compare sites",
+    alternates: { canonical: "/compare" },
+  };
+}
+
+async function Comparison({ searchParams }: { searchParams: Search }) {
+  const { sites, first, second, unknown, duplicate } = await resolveComparison(searchParams);
 
   return (
     <>
