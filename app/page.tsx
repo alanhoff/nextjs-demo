@@ -89,8 +89,8 @@ async function Directory({ searchParams }: { searchParams: Search }) {
           </button>
         </Form>
       </div>
-      <p>
-        <Link href="/compare">Compare sites</Link>{" "}
+      <p className="catalog-actions">
+        <Link href="/compare">Compare sites</Link>
         <a href="/api/sites.csv">Download site catalog (CSV)</a>
       </p>
       <div className="index-tools">
