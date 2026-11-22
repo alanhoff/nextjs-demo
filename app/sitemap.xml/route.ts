@@ -1,8 +1,6 @@
 import { sites } from "@/lib/catalog";
 import { siteOrigin } from "@/lib/origin";
 
-export const dynamic = "force-static";
-
 function escapeXml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
