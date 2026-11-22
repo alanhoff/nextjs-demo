@@ -26,8 +26,11 @@ function coordinate(value: string | null, max: number) {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   for (const key of params.keys()) {
-    if (key !== "lat" && key !== "lon" && key !== "limit") {
-      return Response.json({ error: "Supported parameters are lat, lon and limit." }, { status: 400 });
+    if (key !== "lat" && key !== "lon" && key !== "limit" && key !== "radius_km") {
+      return Response.json(
+        { error: "Supported parameters are lat, lon, limit and radius_km." },
+        { status: 400 },
+      );
     }
     if (params.getAll(key).length > 1) {
       return Response.json({ error: `Use ${key} only once.` }, { status: 400 });
@@ -43,6 +46,12 @@ export async function GET(request: Request) {
     );
   }
 
+  const radiusParam = params.get("radius_km");
+  const radiusKm = radiusParam === null ? null : Number(radiusParam);
+  if (radiusKm !== null && (!Number.isFinite(radiusKm) || radiusKm <= 0)) {
+    return Response.json({ error: "radius_km must be a finite number greater than zero." }, { status: 400 });
+  }
+
   const catalog = await getSites();
   const limit = Number(params.get("limit") ?? catalog.length);
   if (!Number.isInteger(limit) || limit < 1 || limit > catalog.length) {
@@ -54,6 +63,7 @@ export async function GET(request: Request) {
 
   const sites = catalog
     .map(({ slug, coordinates }) => ({ slug, distanceKm: distanceKm(lat, lon, coordinates) }))
+    .filter(({ distanceKm }) => radiusKm === null || distanceKm <= radiusKm)
     .sort((a, b) => a.distanceKm - b.distanceKm)
     .slice(0, limit)
     .map(({ slug, distanceKm }) => ({ slug, distanceKm: Math.round(distanceKm) }));

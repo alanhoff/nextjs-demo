@@ -50,6 +50,12 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
     expect(catalog.head.responses[status]).not.toHaveProperty("content");
   }
   expect(spec.paths["/api/nearby"].get.parameters.filter(({ required }: { required: boolean }) => required).map(({ name }: { name: string }) => name)).toEqual(["lat", "lon"]);
+  expect(spec.paths["/api/nearby"].get.parameters[3]).toMatchObject({
+    name: "radius_km",
+    in: "query",
+    required: false,
+    schema: { type: "number", exclusiveMinimum: 0 },
+  });
   expect(spec.components.schemas.NearbySite.required).toEqual(["slug", "distanceKm"]);
   expect(spec.components.schemas.CatalogSummary.required).toEqual(["total", "byState", "byRegion"]);
   expect(spec.paths["/api/sites/summary"].get.responses["400"].content["application/json"].schema.$ref).toBe("#/components/schemas/FilterError");
