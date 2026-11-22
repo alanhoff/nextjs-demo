@@ -88,6 +88,24 @@
   letter-spacing: -0.04em;
 }
 
+.coordinateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.coordinateRow button {
+  min-height: 2.75rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+}
+.coordinateRow button:hover {
+  text-decoration: underline;
+}
 .coords {
   font-variant-numeric: tabular-nums;
 }

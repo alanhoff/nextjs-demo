@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SaveButton } from "@/components/save-button";
 import { getSite, sites } from "@/lib/catalog";
+import { CoordinateToggle } from "./coordinate-toggle";
 import styles from "./site.module.css";
 
 type Props = PageProps<"/sites/[slug]">;
@@ -65,7 +66,7 @@ export default async function SitePage({ params }: Props) {
         <div>
           <p className={styles.location}>Viewing spot</p>
           <h2>{site.viewpoint}</h2>
-          <p className={styles.coords}>{site.coordinates}</p>
+          <CoordinateToggle compass={site.coordinates} />
           <p className={styles.shortLink}>
             Short link:{" "}
             <Link href={`/go/${site.code}`} prefetch={false}>
