@@ -72,6 +72,32 @@ test("published OpenAPI gives every explicit handler a stable, unique operation 
   expect(new Set(ids).size).toBe(ids.length);
 });
 
+test("published OpenAPI groups every explicit handler by purpose", async ({ request }) => {
+  const response = await request.get("/openapi.json");
+  expect(response.status()).toBe(200);
+  const spec = await response.json();
+
+  expect(spec.tags).toStrictEqual([
+    { name: "Catalog", description: "Browse the site catalog, inspect its response headers, and check catalog status." },
+    { name: "Discovery", description: "Find nearby observing sites and summarize matching sites by state or region." },
+    { name: "Exports", description: "Discover export formats and download the catalog as CSV or GeoJSON." },
+  ]);
+
+  const operationTags = Object.fromEntries(handlerInventory().flatMap(([path, httpMethods]) =>
+    httpMethods.map((method) => [`${method.toUpperCase()} ${path}`, spec.paths[path]?.[method]?.tags]),
+  ));
+  expect(operationTags).toStrictEqual({
+    "GET /api/nearby": ["Discovery"],
+    "GET /api/sites": ["Catalog"],
+    "HEAD /api/sites": ["Catalog"],
+    "GET /api/sites.csv": ["Exports"],
+    "GET /api/sites.geojson": ["Exports"],
+    "GET /api/sites/exports": ["Exports"],
+    "GET /api/sites/status": ["Catalog"],
+    "GET /api/sites/summary": ["Discovery"],
+  });
+});
+
 test("published search constraints match the handlers' trimmed UTF-16 limit", async ({ request }) => {
   const response = await request.get("/openapi.json");
   expect(response.status()).toBe(200);
