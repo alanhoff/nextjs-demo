@@ -40,10 +40,47 @@ for (const [query, summary] of [
   });
 }
 
+const emptySummary = { total: 0, byState: {}, byRegion: {} };
+
+for (const [query, summary] of [
+  ["q=%20jOsHuA%20CaLiF%20hIdDeN%20", {
+    total: 1, byState: { California: 1 }, byRegion: { West: 1 },
+  }],
+  ["region=Southwest&state=Texas&q=sotol", {
+    total: 1, byState: { Texas: 1 }, byRegion: { Southwest: 1 },
+  }],
+  ["q=acadia&region=West", emptySummary],
+  ["q=sotol&state=texas", emptySummary],
+  ["q=%20&state=California", { total: 2, byState: { California: 2 }, byRegion: { West: 2 } }],
+  ["q=&region=West", { total: 3, byState: { California: 2, Nevada: 1 }, byRegion: { West: 3 } }],
+  [`q=%20${"x".repeat(80)}%20`, emptySummary],
+] as const) {
+  test(`sites summary applies catalog search: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?${query}`);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual(summary);
+  });
+}
+
+for (const [query, code, error] of [
+  ["q=acadia&q=acadia", "repeated_filter", "The q parameter may only be specified once."],
+  ["q=&q=", "repeated_filter", "The q parameter may only be specified once."],
+  [`q=${"x".repeat(81)}`, "invalid_filter_value", "q must be 80 characters or fewer."],
+]) {
+  test(`sites summary rejects invalid search queries: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/sites/summary?${query}`);
+    expect(response.status()).toBe(400);
+    expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
+    expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(await response.json()).toEqual({ code, parameter: "q", error });
+  });
+}
+
 for (const [query, parameter] of [
   ["regoin=West", "regoin"],
   ["extra=1", "extra"],
   ["state=California&extra=1", "extra"],
+  ["q=acadia&extra=1", "extra"],
 ]) {
   test(`sites summary rejects unknown parameters: ${query}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?${query}`);
@@ -53,7 +90,7 @@ for (const [query, parameter] of [
     expect(await response.json()).toEqual({
       code: "unknown_parameter",
       parameter,
-      error: `The ${parameter} parameter is not supported. Use state or region.`,
+      error: `The ${parameter} parameter is not supported. Use state, region, or q.`,
     });
   });
 }

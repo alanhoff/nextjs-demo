@@ -1,8 +1,8 @@
-import { getSites, regions } from "@/lib/catalog";
+import { filterSites, getSites, regions } from "@/lib/catalog";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  for (const parameter of ["state", "region"]) {
+  for (const parameter of ["state", "region", "q"]) {
     if (searchParams.getAll(parameter).length > 1) {
       return Response.json(
         {
@@ -29,20 +29,33 @@ export async function GET(request: Request) {
   }
 
   for (const parameter of searchParams.keys()) {
-    if (parameter !== "state" && parameter !== "region") {
+    if (parameter !== "state" && parameter !== "region" && parameter !== "q") {
       return Response.json(
         {
           code: "unknown_parameter",
           parameter,
-          error: `The ${parameter} parameter is not supported. Use state or region.`,
+          error: `The ${parameter} parameter is not supported. Use state, region, or q.`,
         },
         { status: 400, headers: { "Cache-Control": "no-store" } },
       );
     }
   }
 
+  const q = (searchParams.get("q") ?? "").trim();
+  if (q.length > 80) {
+    return Response.json(
+      {
+        code: "invalid_filter_value",
+        parameter: "q",
+        error: "q must be 80 characters or fewer.",
+      },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const catalog = await getSites();
-  const sites = catalog.filter(
+  const matchingSites = q ? filterSites(catalog, "", q) : catalog;
+  const sites = matchingSites.filter(
     ({ state, region }) =>
       (stateFilter === null || state === stateFilter) &&
       (regionFilter === null || region === regionFilter),
