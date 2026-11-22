@@ -1,4 +1,5 @@
 import { getSites } from "@/lib/catalog";
+import { sitesExportResponse } from "@/lib/sites-export-response";
 
 function signedDegrees(coordinate: string) {
   const degrees = Number.parseFloat(coordinate);
@@ -28,8 +29,7 @@ export async function GET(request: Request) {
     };
   });
 
-  return Response.json(
-    { type: "FeatureCollection", features },
-    { headers: { "Content-Type": "application/geo+json" } },
-  );
+  return sitesExportResponse(request, "geojson", JSON.stringify({ type: "FeatureCollection", features }), {
+    "Content-Type": "application/geo+json",
+  });
 }

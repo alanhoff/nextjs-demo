@@ -75,12 +75,12 @@
         "operationId": "exportSitesCsv",
         "tags": ["Exports"],
         "summary": "Download the catalog as CSV",
-        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }],
+        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }, { "$ref": "#/components/parameters/IfNoneMatch" }],
         "responses": { "200": {
           "description": "CSV attachment, with a header row even when no sites match.",
-          "headers": { "Content-Disposition": { "schema": { "type": "string", "const": "attachment; filename=\"sites.csv\"" } } },
+          "headers": { "ETag": { "$ref": "#/components/headers/ETag" }, "Content-Disposition": { "schema": { "type": "string", "const": "attachment; filename=\"sites.csv\"" } } },
           "content": { "text/csv": { "schema": { "$ref": "#/components/schemas/SitesCsv" } } }
-        }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
+        }, "304": { "description": "The selected representation matches If-None-Match. No body.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
       }
     },
     "/api/sites.geojson": {
@@ -88,8 +88,8 @@
         "operationId": "exportSitesGeoJson",
         "tags": ["Exports"],
         "summary": "Export catalog viewing spots as GeoJSON points",
-        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }],
-        "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
+        "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }, { "$ref": "#/components/parameters/IfNoneMatch" }],
+        "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } }, "304": { "description": "The selected representation matches If-None-Match. No body.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
       }
     },
     "/api/sites/exports": {

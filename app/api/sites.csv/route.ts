@@ -1,5 +1,6 @@
 import { getSites } from "@/lib/catalog";
 import { formatSitesCsv, sitesCsvContentType } from "@/lib/sites-csv";
+import { sitesExportResponse } from "@/lib/sites-export-response";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -16,10 +17,8 @@ export async function GET(request: Request) {
       (region === undefined || site.region.toLowerCase() === region),
   );
 
-  return new Response(formatSitesCsv(matchingSites), {
-    headers: {
-      "Content-Type": sitesCsvContentType,
-      "Content-Disposition": 'attachment; filename="sites.csv"',
-    },
+  return sitesExportResponse(request, "csv", formatSitesCsv(matchingSites), {
+    "Content-Type": sitesCsvContentType,
+    "Content-Disposition": 'attachment; filename="sites.csv"',
   });
 }
