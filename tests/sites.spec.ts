@@ -4,6 +4,16 @@ import { sites } from "../lib/catalog";
 const west = sites.filter((site) => site.region === "West");
 const cases = [
   { query: "", matches: sites },
+  { query: "?state=Maine", matches: sites.filter((site) => site.state === "Maine") },
+  {
+    query: "?state=California&offset=1&limit=1",
+    matches: sites.filter((site) => site.state === "California"),
+    offset: 1,
+    limit: 1,
+  },
+  ...["maine", "%20Maine%20", "", "Atlantis", "Maine&region=West", "Maine&q=Texas"].map(
+    (value) => ({ query: `?state=${value}`, matches: [] }),
+  ),
   { query: "?region=West&limit=1", matches: west, limit: 1 },
   {
     query: "?region=West&q=california&limit=1",
@@ -124,6 +134,24 @@ test("sites revalidates only the negotiated representation", async ({ request })
   }
 });
 
+test("sites revalidates the state-filtered CSV page for GET and HEAD", async ({ request }) => {
+  const path = "/api/sites?state=California&limit=1";
+  const headers = { Accept: "text/csv" };
+  const csv = await request.get(path, { headers });
+  expect(csv.status()).toBe(200);
+  const tag = csv.headers().etag;
+  expect(tag).toBeTruthy();
+  expect(tag).not.toBe((await request.get(path)).headers().etag);
+  for (const method of ["GET", "HEAD"]) {
+    const cached = await request.fetch(path, { method, headers: { ...headers, "If-None-Match": tag } });
+    expect(cached.status()).toBe(304);
+    expect(cached.headers().etag).toBe(tag);
+    expect(cached.headers()["x-total-count"]).toBe("2");
+    expect(cached.headers().link).toBe('</api/sites?state=California&offset=1&limit=1>; rel="next"');
+    expect(await cached.text()).toBe("");
+  }
+});
+
 const summarize = ({ description, notes, ...site }: (typeof sites)[number]) => site;
 
 for (const { start, targets, matches, limit, summary = false } of [
@@ -142,6 +170,13 @@ for (const { start, targets, matches, limit, summary = false } of [
   {
     start: "/api/sites?view=summary&limit=1&region=West&q=%43alifornia",
     targets: ["/api/sites?q=California&region=West&offset=1&limit=1&view=summary"],
+    matches: west.filter((site) => site.state === "California"),
+    limit: 1,
+    summary: true,
+  },
+  {
+    start: "/api/sites?state=California&region=wEsT&q=California&limit=1&view=summary",
+    targets: ["/api/sites?q=California&region=wEsT&state=California&offset=1&limit=1&view=summary"],
     matches: west.filter((site) => site.state === "California"),
     limit: 1,
     summary: true,
@@ -240,6 +275,8 @@ const invalidQueries = [
   "offset=1&region=Unknown",
   `offset=1&q=${"a".repeat(81)}`,
   "offset=1&q=California&q=Nevada",
+  "state=Maine&state=Maine",
+  "unexpected=1",
 ];
 
 for (const query of invalidQueries) {

@@ -35,7 +35,8 @@
         "parameters": [
           { "$ref": "#/components/parameters/Search" }, { "$ref": "#/components/parameters/CatalogRegion" },
           { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" },
-          { "$ref": "#/components/parameters/View" }, { "$ref": "#/components/parameters/IfNoneMatch" }
+          { "$ref": "#/components/parameters/View" }, { "$ref": "#/components/parameters/IfNoneMatch" },
+          { "$ref": "#/components/parameters/CatalogState" }
         ],
         "responses": {
           "200": {
@@ -58,7 +59,8 @@
         "parameters": [
           { "$ref": "#/components/parameters/Search" }, { "$ref": "#/components/parameters/CatalogRegion" },
           { "$ref": "#/components/parameters/Limit" }, { "$ref": "#/components/parameters/Offset" },
-          { "$ref": "#/components/parameters/View" }, { "$ref": "#/components/parameters/IfNoneMatch" }
+          { "$ref": "#/components/parameters/View" }, { "$ref": "#/components/parameters/IfNoneMatch" },
+          { "$ref": "#/components/parameters/CatalogState" }
         ],
         "responses": {
           "200": { "description": "Headers for the selected catalog page. No body.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" }, "Vary": { "$ref": "#/components/headers/Vary" }, "X-Total-Count": { "$ref": "#/components/headers/Total" }, "Link": { "$ref": "#/components/headers/Next" } } },
@@ -137,6 +139,7 @@
   },
   "components": {
     "parameters": {
+      "CatalogState": { "name": "state", "in": "query", "required": false, "description": "Exact, case-sensitive state name without trimming. Omit to match any state. Empty, unknown, wrong-case, or padded values match no sites. Specify at most once.", "schema": { "type": "string" } },
       "Search": {
         "name": "q", "in": "query", "required": false,
         "description": "Search text limited to 80 UTF-16 code units after JavaScript String.trim() removes outer whitespace. Supplementary Unicode characters (including many emoji) count as two units. Each whitespace-separated word must match a substring in name, state or viewpoint, ignoring case. Empty text adds no restriction.",

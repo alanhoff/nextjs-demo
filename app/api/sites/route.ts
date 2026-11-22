@@ -25,8 +25,8 @@ async function handleSites(request: Request, head: boolean) {
   const params = new URL(request.url).searchParams;
 
   for (const key of params.keys()) {
-    if (!["q", "region", "limit", "offset", "view"].includes(key)) {
-      return badRequest("Supported parameters are q, region, limit, offset, and view.");
+    if (!["q", "region", "state", "limit", "offset", "view"].includes(key)) {
+      return badRequest("Supported parameters are q, region, state, limit, offset, and view.");
     }
     if (params.getAll(key).length > 1) {
       return badRequest(`Use the ${key} filter only once.`);
@@ -59,7 +59,9 @@ async function handleSites(request: Request, head: boolean) {
     return badRequest("view must be summary.");
   }
 
-  const sites = filterSites(await getSites(), region, q);
+  const stateFilter = params.get("state");
+  const matches = filterSites(await getSites(), region, q);
+  const sites = stateFilter === null ? matches : matches.filter(({ state }) => state === stateFilter);
   const csv = request.headers.get("Accept")?.toLowerCase() === "text/csv";
   const headers = new Headers({
     "Content-Type": csv ? sitesCsvContentType : "application/json",
@@ -71,6 +73,7 @@ async function handleSites(request: Request, head: boolean) {
     const next = new URLSearchParams();
     if (q) next.set("q", q);
     if (regionFilter) next.set("region", regionFilter);
+    if (stateFilter !== null) next.set("state", stateFilter);
     next.set("offset", String(end));
     next.set("limit", limit);
     if (view === "summary") next.set("view", view);

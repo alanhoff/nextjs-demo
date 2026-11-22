@@ -32,6 +32,17 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   expect(Object.fromEntries(Object.entries(spec.paths).map(([path, operations]) => [path, Object.keys(operations as object).sort()]))).toEqual(Object.fromEntries(handlerInventory()));
 
   const catalog = spec.paths["/api/sites"];
+  for (const method of ["get", "head"]) {
+    expect(catalog[method].parameters[6]).toEqual({ $ref: "#/components/parameters/CatalogState" });
+  }
+  expect(spec.components.parameters.CatalogState).toEqual({
+    name: "state",
+    in: "query",
+    required: false,
+    description:
+      "Exact, case-sensitive state name without trimming. Omit to match any state. Empty, unknown, wrong-case, or padded values match no sites. Specify at most once.",
+    schema: { type: "string" },
+  });
   expect(Object.keys(catalog.get.responses["200"].content).sort()).toEqual(["application/json", "text/csv"]);
   expect(catalog.get.responses["304"]).not.toHaveProperty("content");
   expect(Object.keys(catalog.head.responses).sort()).toEqual(["200", "304", "400"]);
