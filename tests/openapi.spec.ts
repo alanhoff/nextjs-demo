@@ -60,10 +60,22 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   expect(spec.components.schemas.CatalogSummary.required).toEqual(["total", "byState", "byRegion"]);
   expect(spec.paths["/api/sites/summary"].get.responses["400"].content["application/json"].schema.$ref).toBe("#/components/schemas/FilterError");
   for (const path of ["/api/sites.csv", "/api/sites.geojson"]) {
-    expect(spec.paths[path].get.parameters).toEqual([{ $ref: "#/components/parameters/ExportRegion" }]);
-    expect(Object.keys(spec.paths[path].get.responses)).toEqual(["200"]);
+    const { parameters, responses } = spec.paths[path].get;
+    expect(parameters).toEqual([
+      { $ref: "#/components/parameters/ExportRegion" },
+      { $ref: "#/components/parameters/CatalogState" },
+    ]);
+    expect(Object.keys(responses)).toEqual(["200", "400"]);
+    expect(responses["400"].description).toBe("Repeated state parameter: Use the state filter only once.");
+    expect(responses["400"].content["application/json"].schema.$ref).toBe("#/components/schemas/Error");
   }
-  expect(spec.components.parameters.ExportRegion).toMatchObject({ style: "form", explode: true, schema: { type: "array" } });
+  expect(spec.components.parameters.ExportRegion).toMatchObject({
+    style: "form",
+    explode: true,
+    schema: { type: "array" },
+    description:
+      "One occurrence filters by region ignoring case and outer whitespace; an empty or unmatched value returns no sites. Omission or multiple occurrences impose no region restriction. When state is supplied, both filters must match. Unrelated query parameters are ignored.",
+  });
 });
 
 test("published OpenAPI gives every explicit handler a stable, unique operation ID", async ({ request }) => {
