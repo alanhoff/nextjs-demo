@@ -49,6 +49,29 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   expect(spec.components.parameters.ExportRegion).toMatchObject({ style: "form", explode: true, schema: { type: "array" } });
 });
 
+test("published OpenAPI gives every explicit handler a stable, unique operation ID", async ({ request }) => {
+  const response = await request.get("/openapi.json");
+  expect(response.status()).toBe(200);
+  const spec = await response.json();
+
+  const operationIds = Object.fromEntries(handlerInventory().flatMap(([path, httpMethods]) =>
+    httpMethods.map((method) => [`${method.toUpperCase()} ${path}`, spec.paths[path]?.[method]?.operationId]),
+  ));
+  expect(operationIds).toStrictEqual({
+    "GET /api/nearby": "getNearbySites",
+    "GET /api/sites": "listSites",
+    "HEAD /api/sites": "headSites",
+    "GET /api/sites.csv": "exportSitesCsv",
+    "GET /api/sites.geojson": "exportSitesGeoJson",
+    "GET /api/sites/exports": "listSiteExports",
+    "GET /api/sites/status": "getSiteStatus",
+    "GET /api/sites/summary": "getSiteSummary",
+  });
+  const ids = Object.values(operationIds);
+  for (const id of ids) expect(id).toMatch(/\S/);
+  expect(new Set(ids).size).toBe(ids.length);
+});
+
 test("published search constraints match the handlers' trimmed UTF-16 limit", async ({ request }) => {
   const response = await request.get("/openapi.json");
   expect(response.status()).toBe(200);

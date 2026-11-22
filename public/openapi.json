@@ -5,6 +5,7 @@
   "paths": {
     "/api/nearby": {
       "get": {
+        "operationId": "getNearbySites",
         "summary": "Find the nearest catalog sites",
         "parameters": [
           { "name": "lat", "in": "query", "required": true, "description": "Latitude in degrees.", "schema": { "type": "number", "minimum": -90, "maximum": 90 } },
@@ -21,6 +22,7 @@
     },
     "/api/sites": {
       "get": {
+        "operationId": "listSites",
         "summary": "List or export a filtered page of sites",
         "description": "JSON by default. Send Accept: text/csv to select CSV; the entire header must equal text/csv ignoring case. Lists and quality values do not select CSV. The view parameter only changes JSON fields.",
         "parameters": [
@@ -42,6 +44,7 @@
         }
       },
       "head": {
+        "operationId": "headSites",
         "summary": "Inspect catalog page headers without downloading the page",
         "description": "Uses the same validation and negotiation as GET. Content-Type is text/csv; charset=utf-8 when Accept equals text/csv ignoring case, and application/json otherwise or on invalid input.",
         "parameters": [
@@ -58,6 +61,7 @@
     },
     "/api/sites.csv": {
       "get": {
+        "operationId": "exportSitesCsv",
         "summary": "Download the catalog as CSV",
         "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }],
         "responses": { "200": {
@@ -69,6 +73,7 @@
     },
     "/api/sites.geojson": {
       "get": {
+        "operationId": "exportSitesGeoJson",
         "summary": "Export catalog viewing spots as GeoJSON points",
         "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }],
         "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } } }
@@ -76,6 +81,7 @@
     },
     "/api/sites/exports": {
       "get": {
+        "operationId": "listSiteExports",
         "summary": "Discover catalog export formats",
         "responses": { "200": { "description": "Available formats with their API paths and media types.", "content": { "application/json": { "schema": {
           "type": "object", "required": ["catalog", "formats"], "properties": {
@@ -91,6 +97,7 @@
     },
     "/api/sites/status": {
       "get": {
+        "operationId": "getSiteStatus",
         "summary": "Read the current catalog status",
         "responses": { "200": { "description": "Catalog identifier, site count, and timestamp generated for this request.", "headers": { "Cache-Control": { "$ref": "#/components/headers/NoStore" } }, "content": { "application/json": { "schema": {
           "type": "object", "required": ["catalog", "site_count", "generated_at"], "properties": {
@@ -101,6 +108,7 @@
     },
     "/api/sites/summary": {
       "get": {
+        "operationId": "getSiteSummary",
         "summary": "Count matching sites by state and region",
         "parameters": [
           { "$ref": "#/components/parameters/Search" },
