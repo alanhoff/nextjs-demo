@@ -9,6 +9,7 @@ test("home catalog link downloads sites.csv even when the directory is filtered"
     exact: true,
   });
   await expect(link).toHaveAttribute("href", "/api/sites.csv");
+  await expect(link).toHaveAttribute("download", "sites.csv");
 
   const [download] = await Promise.all([page.waitForEvent("download"), link.click()]);
   expect(download.suggestedFilename()).toBe("sites.csv");
@@ -104,6 +105,7 @@ test("desktop catalog actions show clear keyboard focus and Enter downloads the 
   const [download] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("Enter")]);
   expect(download.suggestedFilename()).toBe("sites.csv");
   await expect(page).toHaveURL(origin);
+  expect(page.context().pages()).toEqual([page]);
 });
 
 test.describe("touch catalog download", () => {
@@ -119,6 +121,7 @@ test.describe("touch catalog download", () => {
     const [download] = await Promise.all([page.waitForEvent("download"), link.tap()]);
     expect(download.suggestedFilename()).toBe("sites.csv");
     await expect(page).toHaveURL(origin);
+    expect(page.context().pages()).toEqual([page]);
   });
 });
 
