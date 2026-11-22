@@ -19,6 +19,7 @@ test("the catalog formats guide matches live export discovery", async ({ request
   for (const { path, media_type } of formats) {
     expect(documented).toContainEqual({ path, media_type });
   }
+});
 
 test("the California example matches the live GeoJSON export", async ({ request }) => {
   const response = await request.get("/guides/catalog-formats.md");
@@ -40,5 +41,4 @@ test("the California example matches the live GeoJSON export", async ({ request 
       [properties.code, ...geometry.coordinates].join("\t"),
   );
   expect(example?.[2]).toBe(rows.join("\n"));
-});
 });
