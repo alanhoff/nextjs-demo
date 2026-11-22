@@ -1,5 +1,19 @@
 import { expect, test } from "@playwright/test";
 
+test("home catalog link downloads sites.csv even when the directory is filtered", async ({
+  page,
+}) => {
+  await page.goto("/?region=West#sites");
+  const link = page.locator("#sites").getByRole("link", {
+    name: "Download site catalog (CSV)",
+    exact: true,
+  });
+  await expect(link).toHaveAttribute("href", "/api/sites.csv");
+
+  const [download] = await Promise.all([page.waitForEvent("download"), link.click()]);
+  expect(download.suggestedFilename()).toBe("sites.csv");
+});
+
 test("sites CSV downloads the complete catalog in order", async ({ request }) => {
   const response = await request.get("/api/sites.csv");
   expect(response.status()).toBe(200);

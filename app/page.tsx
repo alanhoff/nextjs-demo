@@ -90,7 +90,8 @@ async function Directory({ searchParams }: { searchParams: Search }) {
         </Form>
       </div>
       <p>
-        <Link href="/compare">Compare sites</Link>
+        <Link href="/compare">Compare sites</Link>{" "}
+        <a href="/api/sites.csv">Download site catalog (CSV)</a>
       </p>
       <div className="index-tools">
         <nav aria-label="Filter by region" className="region-links">
