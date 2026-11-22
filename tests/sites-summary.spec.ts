@@ -25,7 +25,9 @@ for (const query of ["", "?from=release&reader=night"]) {
 test("sites summary counts the full catalog by state and region", async ({ request }) => {
   const response = await request.get("/api/sites/summary");
   expect(response.status()).toBe(200);
-  expect(response.headers().link).toBeUndefined();
+  expect(response.headersArray().filter(({ name }) => name.toLowerCase() === "link").map(({ value }) => value)).toEqual([
+    `<${guidePath}>; rel="help"`,
+  ]);
   expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
   expect(await response.json()).toEqual({
     total: 6,
@@ -43,7 +45,9 @@ test("sites summary counts the full catalog by state and region", async ({ reque
 test("sites summary filters by exact state name", async ({ request }) => {
   const response = await request.get("/api/sites/summary?state=California");
   expect(response.status()).toBe(200);
-  expect(response.headers().link).toBeUndefined();
+  expect(response.headersArray().filter(({ name }) => name.toLowerCase() === "link").map(({ value }) => value)).toEqual([
+    `<${guidePath}>; rel="help"`,
+  ]);
   expect(await response.json()).toEqual({
     total: 2,
     byState: { California: 2 },
@@ -60,6 +64,7 @@ for (const [query, summary] of [
   test(`sites summary applies region and optional state: ${query}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?${query}`);
     expect(response.status()).toBe(200);
+    expect(response.headers().link).toBe(`<${guidePath}>; rel="help"`);
     expect(await response.json()).toEqual(summary);
   });
 }
@@ -82,6 +87,7 @@ for (const [query, summary] of [
   test(`sites summary applies catalog search: ${query}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?${query}`);
     expect(response.status()).toBe(200);
+    expect(response.headers().link).toBe(`<${guidePath}>; rel="help"`);
     expect(await response.json()).toEqual(summary);
   });
 }
@@ -166,10 +172,26 @@ for (const query of [
   });
 }
 
+for (const [query, status] of [
+  ["", 200],
+  ["?region=West", 200],
+  ["?state=Atlantis", 200],
+  ["?bogus=1", 400],
+] as const) {
+  test(`sites summary HEAD links to the guide: ${query || "no query"}`, async ({ request }) => {
+    const response = await request.head(`/api/sites/summary${query}`);
+    expect(response.status()).toBe(status);
+    expect(response.headers().link).toBe(`<${guidePath}>; rel="help"`);
+    expect(await response.text()).toBe("");
+    if (status === 400) expect(response.headers()["cache-control"]).toBe("no-store");
+  });
+}
+
 for (const state of ["Atlantis", "california", ""]) {
   test(`sites summary returns zero for state ${JSON.stringify(state)}`, async ({ request }) => {
     const response = await request.get(`/api/sites/summary?state=${state}`);
     expect(response.status()).toBe(200);
+    expect(response.headers().link).toBe(`<${guidePath}>; rel="help"`);
     expect(await response.json()).toEqual({ total: 0, byState: {}, byRegion: {} });
   });
 }

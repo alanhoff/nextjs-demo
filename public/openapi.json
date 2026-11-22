@@ -132,7 +132,17 @@
           { "name": "region", "in": "query", "required": false, "description": "Exact case-sensitive catalog region.", "schema": { "$ref": "#/components/schemas/Region" } }
         ],
         "responses": {
-          "200": { "description": "Counts from the intersection of the supplied filters. No matches yield zero and empty count maps.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogSummary" } } } },
+          "200": {
+            "description": "Counts from the intersection of the supplied filters. No matches yield zero and empty count maps.",
+            "headers": {
+              "Link": {
+                "description": "Links to the catalog summary guide using the help relation.",
+                "schema": { "type": "string" },
+                "example": "</guides/catalog-summary.md>; rel=\"help\""
+              }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogSummary" } } }
+          },
           "400": { "description": "Repeated filter, unknown query parameter, invalid region, or search text exceeding the limit.", "headers": { "Cache-Control": { "$ref": "#/components/headers/NoStore" } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FilterError" } } } }
         }
       }

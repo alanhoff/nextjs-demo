@@ -69,5 +69,8 @@ export async function GET(request: Request) {
     byRegion[region] = (byRegion[region] ?? 0) + 1;
   }
 
-  return Response.json({ total: sites.length, byState, byRegion });
+  return Response.json(
+    { total: sites.length, byState, byRegion },
+    { headers: { Link: '</guides/catalog-summary.md>; rel="help"' } },
+  );
 }
