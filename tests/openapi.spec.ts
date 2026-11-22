@@ -1,8 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import ts from "typescript";
 
+const exportedFunction = /^export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(/;
 const methods = /^(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS|TRACE)$/;
 
 function handlerInventory(directory = "app/api", route = "/api"): [string, string[]][] {
@@ -11,17 +11,15 @@ function handlerInventory(directory = "app/api", route = "/api"): [string, strin
     if (entry.isDirectory()) return handlerInventory(path, `${route}/${entry.name}`);
     if (entry.name !== "route.ts") return [];
 
-    const source = ts.createSourceFile(path, readFileSync(path, "utf8"), ts.ScriptTarget.Latest, true);
-    const exported = source.statements.flatMap((statement) => {
-      if (ts.isExportDeclaration(statement) && !statement.isTypeOnly && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
-        return statement.exportClause.elements.filter((element) => !element.isTypeOnly).map((element) => element.name.text);
-      }
-      if (!ts.canHaveModifiers(statement) || !ts.getModifiers(statement)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) return [];
-      if (ts.isFunctionDeclaration(statement) && statement.name) return [statement.name.text];
-      if (ts.isVariableStatement(statement)) return statement.declarationList.declarations.flatMap(({ name }) => ts.isIdentifier(name) ? [name.text] : []);
-      return [];
+    const source = readFileSync(path, "utf8");
+    const exported = Array.from(source.matchAll(/^\s*export\b[^\S\r\n]*[^\r\n]*/gm), ([declaration]) => {
+      const match = exportedFunction.exec(declaration.trimStart());
+      if (!match) throw new Error(`Unsupported route export in ${path}: ${declaration.trim()}`);
+      return match[1];
     });
-    return [[route, exported.filter((method) => methods.test(method)).map((method) => method.toLowerCase()).sort()]];
+    const httpMethods = exported.filter((method) => methods.test(method));
+    if (httpMethods.length === 0) throw new Error(`No explicit HTTP method exports found in ${path}`);
+    return [[route, httpMethods.map((method) => method.toLowerCase()).sort()]];
   });
 }
 
