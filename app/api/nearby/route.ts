@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   for (const key of params.keys()) {
     if (key !== "lat" && key !== "lon" && key !== "limit" && key !== "radius_km" && key !== "view") {
       return Response.json(
-        { error: "Supported parameters are lat, lon, limit and radius_km." },
+        { error: "Supported parameters are lat, lon, limit, radius_km and view." },
         { status: 400 },
       );
     }

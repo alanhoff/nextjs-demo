@@ -58,9 +58,24 @@ test("nearby applies the radius before rounding distances", async ({ request }) 
 });
 
 test("nearby lists supported parameters for unknown query names", async ({ request }) => {
-  const response = await request.get("/api/nearby?lat=0&lon=0&radius=1");
-  expect(response.status()).toBe(400);
-  expect(await response.json()).toEqual({ error: "Supported parameters are lat, lon, limit and radius_km." });
+  const openApiResponse = await request.get("/openapi.json");
+  expect(openApiResponse.status()).toBe(200);
+  const document = await openApiResponse.json();
+  const declaredNames = document.paths["/api/nearby"].get.parameters
+    .filter((parameter: { in: string }) => parameter.in === "query")
+    .map((parameter: { name: string }) => parameter.name);
+
+  for (const query of ["bogus=1", "view=identity&units=mi"]) {
+    const response = await request.get(`/api/nearby?lat=34.011&lon=-116.168&limit=2&${query}`);
+    expect(response.status()).toBe(400);
+    expect(response.headers()["content-type"]).toBe("application/json");
+    const body = await response.json();
+    expect(body).toEqual({ error: "Supported parameters are lat, lon, limit, radius_km and view." });
+    const advertisedNames = body.error
+      .slice("Supported parameters are ".length, -1)
+      .split(/, | and /);
+    expect(advertisedNames.sort()).toEqual([...declaredNames].sort());
+  }
 });
 
 for (const query of [
