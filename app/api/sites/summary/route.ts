@@ -10,7 +10,7 @@ export async function GET(request: Request) {
           parameter,
           error: `The ${parameter} parameter may only be specified once.`,
         },
-        { status: 400, headers: { "Cache-Control": "no-store" } },
+        { status: 400, headers: { "Cache-Control": "no-store", Link: '</guides/catalog-summary.md>; rel="help"' } },
       );
     }
   }
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         parameter: "region",
         error: `The region parameter must be one of: ${regions.join(", ")}.`,
       },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: { "Cache-Control": "no-store", Link: '</guides/catalog-summary.md>; rel="help"' } },
     );
   }
 
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
           parameter,
           error: `The ${parameter} parameter is not supported. Use state, region, or q.`,
         },
-        { status: 400, headers: { "Cache-Control": "no-store" } },
+        { status: 400, headers: { "Cache-Control": "no-store", Link: '</guides/catalog-summary.md>; rel="help"' } },
       );
     }
   }
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         parameter: "q",
         error: "q must be 80 characters or fewer.",
       },
-      { status: 400, headers: { "Cache-Control": "no-store" } },
+      { status: 400, headers: { "Cache-Control": "no-store", Link: '</guides/catalog-summary.md>; rel="help"' } },
     );
   }
 

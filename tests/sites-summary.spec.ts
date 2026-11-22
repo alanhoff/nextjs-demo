@@ -6,6 +6,7 @@ const guidePath = "/guides/catalog-summary.md";
 test("the canonical catalog summary guide serves the original Markdown", async ({ request }) => {
   const response = await request.get(guidePath, { maxRedirects: 0 });
   expect(response.status()).toBe(200);
+  expect(await response.text()).toContain("## HTTP 400 errors");
   expect(createHash("sha256").update(await response.body()).digest("hex")).toBe(
     "24328648705f2607dd02f719ba7d33ee8803fd53bd331d949eba74323d8d0e5f",
   );
@@ -24,6 +25,7 @@ for (const query of ["", "?from=release&reader=night"]) {
 test("sites summary counts the full catalog by state and region", async ({ request }) => {
   const response = await request.get("/api/sites/summary");
   expect(response.status()).toBe(200);
+  expect(response.headers().link).toBeUndefined();
   expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
   expect(await response.json()).toEqual({
     total: 6,
@@ -41,6 +43,7 @@ test("sites summary counts the full catalog by state and region", async ({ reque
 test("sites summary filters by exact state name", async ({ request }) => {
   const response = await request.get("/api/sites/summary?state=California");
   expect(response.status()).toBe(200);
+  expect(response.headers().link).toBeUndefined();
   expect(await response.json()).toEqual({
     total: 2,
     byState: { California: 2 },
@@ -93,6 +96,9 @@ for (const [query, code, error] of [
     expect(response.status()).toBe(400);
     expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
     expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(response.headersArray().filter(({ name }) => name.toLowerCase() === "link").map(({ value }) => value)).toEqual([
+      `<${guidePath}>; rel="help"`,
+    ]);
     expect(await response.json()).toEqual({ code, parameter: "q", error });
   });
 }
@@ -108,6 +114,9 @@ for (const [query, parameter] of [
     expect(response.status()).toBe(400);
     expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
     expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(response.headersArray().filter(({ name }) => name.toLowerCase() === "link").map(({ value }) => value)).toEqual([
+      `<${guidePath}>; rel="help"`,
+    ]);
     expect(await response.json()).toEqual({
       code: "unknown_parameter",
       parameter,
@@ -128,6 +137,9 @@ for (const [query, code] of [
     const response = await request.get(`/api/sites/summary?${query}`);
     expect(response.status()).toBe(400);
     expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(response.headersArray().filter(({ name }) => name.toLowerCase() === "link").map(({ value }) => value)).toEqual([
+      `<${guidePath}>; rel="help"`,
+    ]);
     expect(await response.json()).toEqual({ code, parameter: "region", error: expect.stringMatching(/region/) });
   });
 }
@@ -143,6 +155,9 @@ for (const query of [
     expect(response.status()).toBe(400);
     expect(response.headers()["content-type"]).toMatch(/^application\/json(?:;|$)/);
     expect(response.headers()["cache-control"]).toBe("no-store");
+    expect(response.headersArray().filter(({ name }) => name.toLowerCase() === "link").map(({ value }) => value)).toEqual([
+      `<${guidePath}>; rel="help"`,
+    ]);
     expect(await response.json()).toEqual({
       code: "repeated_filter",
       parameter: "state",
