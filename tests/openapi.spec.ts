@@ -109,6 +109,33 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   });
 });
 
+test("published OpenAPI links the three catalog GET operations to their guides", async ({ request }) => {
+  const response = await request.get("/openapi.json");
+  expect(response.status()).toBe(200);
+  const spec = await response.json();
+
+  const guides = [
+    ["/api/sites", "/guides/catalog-http.md", "# Catalog HTTP guide"],
+    ["/api/sites/exports", "/guides/catalog-formats.md", "# Catalog export formats"],
+    ["/api/sites/summary", "/guides/catalog-summary.md", "# Night Atlas catalog summary API"],
+  ];
+  const linkedOperations = handlerInventory().flatMap(([path, httpMethods]) =>
+    httpMethods
+      .filter((method) => Object.hasOwn(spec.paths[path][method], "externalDocs"))
+      .map((method) => `${method} ${path}`),
+  );
+  expect(linkedOperations.sort()).toEqual(guides.map(([path]) => `get ${path}`));
+
+  for (const [path, url, title] of guides) {
+    const { externalDocs } = spec.paths[path].get;
+    expect(externalDocs.url).toBe(url);
+    expect(externalDocs.description).toMatch(/\S/);
+    const guide = await request.get(externalDocs.url);
+    expect(guide.status()).toBe(200);
+    expect((await guide.text()).split(/\r?\n/, 1)[0]).toBe(title);
+  }
+});
+
 test("published OpenAPI gives every explicit handler a stable, unique operation ID", async ({ request }) => {
   const response = await request.get("/openapi.json");
   expect(response.status()).toBe(200);

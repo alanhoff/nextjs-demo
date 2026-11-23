@@ -33,6 +33,10 @@
         "operationId": "listSites",
         "tags": ["Catalog"],
         "summary": "List or export a filtered page of sites",
+        "externalDocs": {
+          "description": "Learn how to filter, paginate, and cache catalog requests.",
+          "url": "/guides/catalog-http.md"
+        },
         "description": "JSON by default. Send Accept: text/csv to select CSV; the entire header must equal text/csv ignoring case. Lists and quality values do not select CSV. The view parameter only changes JSON fields.",
         "parameters": [
           { "$ref": "#/components/parameters/Search" }, { "$ref": "#/components/parameters/CatalogRegion" },
@@ -125,6 +129,10 @@
         "operationId": "listSiteExports",
         "tags": ["Exports"],
         "summary": "Discover catalog export formats",
+        "externalDocs": {
+          "description": "Compare the available catalog export formats.",
+          "url": "/guides/catalog-formats.md"
+        },
         "responses": { "200": { "description": "Available formats with their API paths and media types.", "content": { "application/json": { "schema": {
           "type": "object", "required": ["catalog", "formats"], "properties": {
             "catalog": { "const": "night-atlas" },
@@ -154,6 +162,10 @@
         "operationId": "getSiteSummary",
         "tags": ["Discovery"],
         "summary": "Count matching sites by state and region",
+        "externalDocs": {
+          "description": "See how filters affect counts by state and region.",
+          "url": "/guides/catalog-summary.md"
+        },
         "parameters": [
           { "$ref": "#/components/parameters/Search" },
           { "name": "state", "in": "query", "required": false, "description": "Exact case-sensitive state name. Unknown or empty values match no sites.", "schema": { "type": "string" } },
