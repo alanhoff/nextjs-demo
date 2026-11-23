@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { expect, test } from "@playwright/test";
+import phaseArchive from "../app/sky-notes/usno-2026-2028.json";
 
 for (const width of [390, 1440]) {
   test(`the calendar shortcut moves keyboard focus to the planner at ${width}px`, async ({
@@ -111,9 +112,16 @@ for (const query of [
       await expect(phases).toHaveCount(0);
     } else {
       await expect(field).not.toHaveAttribute("aria-describedby", /.+/);
-      if (query) {
-        await expect(phases).toHaveCount(4);
-      } else {
+      await expect(phases).toHaveCount(4);
+      if (!query) {
+        const expected = phaseArchive.filter(({ at }) => at >= today).slice(0, 4);
+        expect(expected).toHaveLength(4);
+        for (const [index, { name, at }] of expected.entries()) {
+          const phase = phases.nth(index);
+          await expect(phase.getByRole("heading")).toHaveText(name);
+          await expect(phase.locator("time")).toHaveAttribute("datetime", at);
+          await expect(phase.locator("time")).toContainText(`${at.slice(11, 16)} UTC`);
+        }
         await field.fill("2028-12-31");
         await page.getByRole("button", { name: "Show phases" }).click();
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
@@ -123,15 +131,20 @@ for (const query of [
   });
 }
 
-for (const [entry, edit] of [
+const shellInteractions = [
   ["shortcut", "typed"],
   ["shortcut", "cleared"],
   ["shortcut", "clicked away"],
   ["fragment", "typed"],
   ["fragment", "cleared"],
   ["fragment", "clicked away"],
-] as const) {
-  test(`a shell edit survives streaming and hydration (${entry}, ${edit})`, async ({
+] as const;
+const streamCases = (["ordinary", "gated"] as const).flatMap((schedule) =>
+  shellInteractions.map(([entry, edit]) => ({ schedule, entry, edit })),
+);
+
+for (const { schedule, entry, edit } of streamCases) {
+  test(`a shell edit survives streaming and hydration (${schedule}, ${entry}, ${edit})`, async ({
     page,
     request,
   }) => {
@@ -144,10 +157,12 @@ for (const [entry, edit] of [
     const bundlesReady = new Promise<void>((resolve) => {
       releaseBundles = resolve;
     });
-    await page.route("**/_next/static/**/*.js", async (route) => {
-      await bundlesReady;
-      await route.continue();
-    });
+    if (schedule === "gated") {
+      await page.route("**/_next/static/**/*.js", async (route) => {
+        await bundlesReady;
+        await route.continue();
+      });
+    }
     // Hold actual document bytes, not just execution of an injected parser gate.
     const response = await request.get(path);
     const html = await response.text();
