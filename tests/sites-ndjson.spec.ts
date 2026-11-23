@@ -21,21 +21,37 @@ test("NDJSON exports full canonical sites in order with an LF after each record"
   const digest = createHash("sha256").update(bytes).digest("hex");
   expect(etag).toBe(`W/"ndjson-${digest}"`);
 
+  const attachment = 'attachment; filename="night-atlas-sites.ndjson"';
   const nonmatching = '"ndjson-stale"';
-  for (const validator of [etag, etag.slice(2), `${nonmatching}, ${etag}`, "*"]) {
-    const cached = await request.get("/api/sites.ndjson", {
-      headers: { "If-None-Match": validator },
-    });
-    expect(cached.status(), `If-None-Match: ${validator}`).toBe(304);
-    expect(cached.headers().etag).toBe(etag);
-    expect(await cached.body()).toHaveLength(0);
-  }
+  for (const query of ["", "?download=0", "?download=1"]) {
+    const path = `/api/sites.ndjson${query}`;
+    const disposition = query === "?download=1" ? attachment : undefined;
 
-  const fresh = await request.get("/api/sites.ndjson", {
-    headers: { "If-None-Match": nonmatching },
-  });
-  expect(fresh.status()).toBe(200);
-  expect(fresh.headers().etag).toBe(etag);
-  expect(fresh.headers()["content-type"]).toBe("application/x-ndjson");
-  expect(await fresh.body()).toEqual(bytes);
+    await test.step(`Check representation and revalidation for ${path}`, async () => {
+      const fresh = query ? await request.get(path) : response;
+      expect(fresh.status()).toBe(200);
+      expect(fresh.headers()["content-disposition"]).toBe(disposition);
+      expect(fresh.headers()["content-type"]).toBe("application/x-ndjson");
+      expect(fresh.headers().etag).toBe(etag);
+      expect(await fresh.body()).toEqual(bytes);
+
+      for (const validator of [etag, etag.slice(2), `${nonmatching}, ${etag}`, "*"]) {
+        const cached = await request.get(path, {
+          headers: { "If-None-Match": validator },
+        });
+        expect(cached.status(), `If-None-Match: ${validator}`).toBe(304);
+        expect(cached.headers().etag).toBe(etag);
+        expect(await cached.body()).toHaveLength(0);
+      }
+
+      const stale = await request.get(path, {
+        headers: { "If-None-Match": nonmatching },
+      });
+      expect(stale.status()).toBe(200);
+      expect(stale.headers()["content-disposition"]).toBe(disposition);
+      expect(stale.headers()["content-type"]).toBe("application/x-ndjson");
+      expect(stale.headers().etag).toBe(etag);
+      expect(await stale.body()).toEqual(bytes);
+    });
+  }
 });
