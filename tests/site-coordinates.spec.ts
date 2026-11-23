@@ -26,11 +26,58 @@ for (const { slug, width, height, coordinates } of [
     await expect(hint).toBeVisible();
     expect(await layout()).toEqual(before);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    const hintBox = await hint.boundingBox();
+    const [buttonBox] = before;
+    if (!hintBox || !buttonBox) throw new Error("Expected visible coordinate help and button");
+    expect(hintBox.x).toBeGreaterThanOrEqual(0);
+    expect(hintBox.x + hintBox.width).toBeLessThanOrEqual(width);
+    expect(hintBox.y).toBeGreaterThanOrEqual(0);
+    expect(hintBox.y + hintBox.height).toBeLessThanOrEqual(height);
+    for (const neighbor of [
+      button,
+      compass,
+      shortLink,
+      page.getByText("Viewing spot", { exact: true }),
+      page.getByRole("heading", { name: slug === "acadia" ? "Sand Beach" : "Paria View" }),
+      page.getByRole("link", { name: "Compare this site" }),
+    ]) {
+      const box = await neighbor.boundingBox();
+      if (!box) throw new Error("Expected visible neighboring content");
+      expect(
+        hintBox.x < box.x + box.width &&
+          hintBox.x + hintBox.width > box.x &&
+          hintBox.y < box.y + box.height &&
+          hintBox.y + hintBox.height > box.y,
+      ).toBe(false);
+    }
+
+    const x = buttonBox.x + buttonBox.width / 2;
+    await page.mouse.move(x, hintBox.y + hintBox.height / 2, { steps: 20 });
+    await expect(hint).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(hint).toBeHidden();
     await page.mouse.move(0, 0);
     await expect(hint).toBeHidden();
 
+    await button.hover();
+    await page.keyboard.press("Escape");
+    await expect(hint).toBeHidden();
+    await expect(button).not.toBeFocused();
+    expect(await layout()).toEqual(before);
+    await page.mouse.move(0, 0);
+    await button.hover();
+    await expect(hint).toBeVisible();
+    await page.mouse.move(0, 0);
+
     await photo.focus();
     await page.keyboard.press("Tab");
+    await expect(button).toBeFocused();
+    await expect(hint).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(hint).toBeHidden();
+    await expect(button).toBeFocused();
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Shift+Tab");
     await expect(button).toBeFocused();
     await expect(hint).toBeVisible();
     await button.hover();

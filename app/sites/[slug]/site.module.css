@@ -89,11 +89,10 @@
 }
 
 .coordinateRow {
-  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  column-gap: 0.75rem;
 }
 .coordinateRow button {
   min-height: 2.75rem;
@@ -108,12 +107,9 @@
   text-decoration: underline;
 }
 .coordinateHint {
-  position: absolute;
-  z-index: 1;
-  inset-inline-end: 0;
-  bottom: calc(100% + 0.25rem);
-  width: max-content;
-  max-width: min(100%, 20rem);
+  /* Reserve a line below the controls and keep it flush for pointer travel. */
+  flex: 0 0 100%;
+  min-width: 0;
   box-sizing: border-box;
   padding: 0.45rem 0.65rem;
   border-radius: 0.25rem;
@@ -122,7 +118,8 @@
   font-size: 0.85rem;
   visibility: hidden;
 }
-.coordinateRow button:is(:hover, :focus) + .coordinateHint {
+.coordinateRow button:is(:hover, :focus) + .coordinateHint[data-available="true"],
+.coordinateHint[data-available="true"]:hover {
   visibility: visible;
 }
 .coords {
