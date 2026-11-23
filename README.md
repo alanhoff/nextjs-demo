@@ -53,6 +53,8 @@ Import the [OpenAPI 3.1.1 description](public/openapi.json), served by the app a
 
 For aggregate counts instead of site records, see the [catalog summary API guide](public/guides/catalog-summary.md), served by the app at `/guides/catalog-summary.md`.
 
+Read the complete [catalog export formats guide](http://localhost:3000/guides/catalog-formats.md), or request a focused guide with exactly one case-sensitive `format` parameter: `json`, `csv`, `geojson`, or `ndjson`. For example, open [the CSV guide](http://localhost:3000/guides/catalog-formats.md?format=csv). Empty, unknown, and repeated `format` values return HTTP 400.
+
 See the [route methods guide](public/guides/route-methods.md) for explicit handler exports, including the park redirect and calendar download.
 
 ## Verify a change

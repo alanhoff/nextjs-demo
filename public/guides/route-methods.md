@@ -13,6 +13,7 @@ This guide lists the HTTP methods explicitly exported by Night Atlas’s `app/**
 | `/api/sites.csv` | `GET` | [route.ts](https://github.com/alanhoff/nextjs-demo/blob/HEAD/app/api/sites.csv/route.ts) |
 | `/api/sites.geojson` | `GET` | [route.ts](https://github.com/alanhoff/nextjs-demo/blob/HEAD/app/api/sites.geojson/route.ts) |
 | `/api/sites.ndjson` | `GET` | [route.ts](https://github.com/alanhoff/nextjs-demo/blob/HEAD/app/api/sites.ndjson/route.ts) |
+| `/guides/catalog-formats.md` | `GET` | [route.ts](https://github.com/alanhoff/nextjs-demo/blob/HEAD/app/guides/catalog-formats.md/route.ts) |
 | `/parks/{code}` | `GET`, `HEAD` | [route.ts](https://github.com/alanhoff/nextjs-demo/blob/HEAD/app/parks/%5Bcode%5D/route.ts) |
 | `/sky-notes/calendar.ics` | `GET` | [route.ts](https://github.com/alanhoff/nextjs-demo/blob/HEAD/app/sky-notes/calendar.ics/route.ts) |
 
