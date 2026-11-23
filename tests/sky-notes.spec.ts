@@ -1,5 +1,39 @@
 import { expect, test } from "@playwright/test";
 
+for (const width of [390, 1440]) {
+  test(`the calendar shortcut moves keyboard focus to the planner at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/sky-notes");
+    const heading = page.getByRole("heading", { name: "Moon calendar", exact: true });
+    await expect(heading).toBeVisible();
+    const shortcut = page.getByRole("link", { name: "Skip to moon calendar", exact: true });
+    await expect(shortcut).not.toBeInViewport();
+
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Skip to content", exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(shortcut).toBeFocused();
+    await expect(shortcut).toBeInViewport({ ratio: 1 });
+
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/\/sky-notes#calendar-title$/);
+    await expect(heading).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Starting date (UTC)")).toBeFocused();
+  });
+}
+
+test("the atlas keeps its original skip link before the masthead", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "Skip to moon calendar", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Night Atlas home" })).toBeFocused();
+});
+
 test("the moon calendar crosses year-end and rejects impossible dates", async ({ page }) => {
   await page.goto("/sky-notes?date=2028-02-30");
   await expect(page.getByText("Choose a date from 1700 through 2099.")).toBeVisible();

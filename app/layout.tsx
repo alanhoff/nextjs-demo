@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
+import { CalendarSkipLink } from "@/components/calendar-skip-link";
 import { Compass } from "@/components/marks";
 import { Navigation } from "@/components/navigation";
 import { siteOrigin } from "@/lib/origin";
@@ -36,6 +37,7 @@ export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
+        <CalendarSkipLink />
         <header className="masthead">
           <div className="shell masthead-inner">
             <Link className="wordmark" href="/" aria-label="Night Atlas home">

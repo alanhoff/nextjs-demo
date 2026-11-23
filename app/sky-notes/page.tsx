@@ -26,7 +26,7 @@ async function Calendar({ searchParams }: { searchParams: Query }) {
 
   return (
     <section className={styles.calendar} aria-labelledby="calendar-title">
-      <h2 id="calendar-title">Moon calendar</h2>
+      <h2 id="calendar-title" tabIndex={-1}>Moon calendar</h2>
       <Form action="/sky-notes" className={styles.dateForm}>
         <div>
           <label htmlFor="start-date">Starting date (UTC)</label>

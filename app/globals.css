@@ -73,6 +73,9 @@ h3 {
   color: white;
   padding: 12px;
 }
+.calendar-skip-link {
+  position: fixed;
+}
 .skip-link:focus {
   top: 10px;
 }
