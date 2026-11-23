@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { filterSites, getSites, regions } from "@/lib/catalog";
 import { matchesIfNoneMatch } from "@/lib/etag";
+import { toSiteSummary, validateSiteView } from "@/lib/site-view";
 import { formatSitesCsv, sitesCsvContentType } from "@/lib/sites-csv";
 
 async function handleSites(request: Request, head: boolean) {
@@ -40,10 +41,9 @@ async function handleSites(request: Request, head: boolean) {
     return badRequest("offset must be a nonnegative safe integer.");
   }
 
+  const viewError = validateSiteView(params);
+  if (viewError) return badRequest(viewError);
   const view = params.get("view");
-  if (view !== null && view !== "summary") {
-    return badRequest("view must be summary.");
-  }
 
   const stateFilter = params.get("state");
   const matches = filterSites(await getSites(), region, q);
@@ -69,7 +69,7 @@ async function handleSites(request: Request, head: boolean) {
   const body = csv
     ? formatSitesCsv(page)
     : JSON.stringify({
-        sites: view === "summary" ? page.map(({ description, notes, ...site }) => site) : page,
+        sites: view === "summary" ? page.map(toSiteSummary) : page,
       });
   const tag = `"${createHash("sha256").update(body).digest("hex")}"`;
   headers.set("ETag", `W/${tag}`);

@@ -81,10 +81,12 @@
         "tags": ["Catalog"],
         "summary": "Get one catalog site by its published slug",
         "parameters": [
-          { "name": "slug", "in": "path", "required": true, "description": "Exact, case-sensitive catalog slug.", "schema": { "type": "string" } }
+          { "name": "slug", "in": "path", "required": true, "description": "Exact, case-sensitive catalog slug.", "schema": { "type": "string" } },
+          { "$ref": "#/components/parameters/View" }
         ],
         "responses": {
-          "200": { "description": "The complete catalog site.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Site" } } } },
+          "200": { "description": "One complete catalog site by default, or one summary without description or notes when view=summary.", "content": { "application/json": { "schema": { "oneOf": [{ "$ref": "#/components/schemas/Site" }, { "$ref": "#/components/schemas/SiteSummary" }] } } } },
+          "400": { "description": "Invalid or repeated view parameter.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
           "404": { "description": "Site not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }

@@ -44,9 +44,13 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   const detail = spec.paths["/api/sites/{slug}"].get;
   expect(detail.parameters).toMatchObject([
     { name: "slug", in: "path", required: true, schema: { type: "string" } },
+    { $ref: "#/components/parameters/View" },
   ]);
   expect(detail.responses["200"].content["application/json"].schema).toEqual({
-    $ref: "#/components/schemas/Site",
+    oneOf: [{ $ref: "#/components/schemas/Site" }, { $ref: "#/components/schemas/SiteSummary" }],
+  });
+  expect(detail.responses["400"].content["application/json"].schema).toEqual({
+    $ref: "#/components/schemas/Error",
   });
   expect(detail.responses["404"].content["application/json"].schema).toEqual({
     $ref: "#/components/schemas/Error",
