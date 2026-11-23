@@ -94,6 +94,10 @@
         "operationId": "exportSitesCsv",
         "tags": ["Exports"],
         "summary": "Download the catalog as CSV",
+        "externalDocs": {
+          "description": "Compare the available catalog export formats.",
+          "url": "/guides/catalog-formats.md"
+        },
         "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }, { "$ref": "#/components/parameters/IfNoneMatch" }],
         "responses": { "200": {
           "description": "CSV attachment, with a header row even when no sites match.",
@@ -107,6 +111,10 @@
         "operationId": "exportSitesGeoJson",
         "tags": ["Exports"],
         "summary": "Export catalog viewing spots as GeoJSON points",
+        "externalDocs": {
+          "description": "Compare the available catalog export formats.",
+          "url": "/guides/catalog-formats.md"
+        },
         "parameters": [{ "$ref": "#/components/parameters/ExportRegion" }, { "$ref": "#/components/parameters/CatalogState" }, { "$ref": "#/components/parameters/IfNoneMatch" }],
         "responses": { "200": { "description": "Feature collection, with an empty features array when no sites match.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }, "content": { "application/geo+json": { "schema": { "$ref": "#/components/schemas/FeatureCollection" } } } }, "304": { "description": "The selected representation matches If-None-Match. No body.", "headers": { "ETag": { "$ref": "#/components/headers/ETag" } } }, "400": { "description": "Repeated state parameter: Use the state filter only once.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } } }
       }
@@ -116,6 +124,10 @@
         "operationId": "exportSitesNdjson",
         "tags": ["Exports"],
         "summary": "Download the full catalog as newline-delimited JSON",
+        "externalDocs": {
+          "description": "Compare the available catalog export formats.",
+          "url": "/guides/catalog-formats.md"
+        },
         "parameters": [
           { "$ref": "#/components/parameters/IfNoneMatch" },
           {

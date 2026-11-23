@@ -109,13 +109,16 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   });
 });
 
-test("published OpenAPI links the three catalog GET operations to their guides", async ({ request }) => {
+test("published OpenAPI links the six catalog GET operations to their guides", async ({ request }) => {
   const response = await request.get("/openapi.json");
   expect(response.status()).toBe(200);
   const spec = await response.json();
 
   const guides = [
     ["/api/sites", "/guides/catalog-http.md", "# Catalog HTTP guide"],
+    ["/api/sites.csv", "/guides/catalog-formats.md", "# Catalog export formats"],
+    ["/api/sites.geojson", "/guides/catalog-formats.md", "# Catalog export formats"],
+    ["/api/sites.ndjson", "/guides/catalog-formats.md", "# Catalog export formats"],
     ["/api/sites/exports", "/guides/catalog-formats.md", "# Catalog export formats"],
     ["/api/sites/summary", "/guides/catalog-summary.md", "# Night Atlas catalog summary API"],
   ];
@@ -130,8 +133,14 @@ test("published OpenAPI links the three catalog GET operations to their guides",
     const { externalDocs } = spec.paths[path].get;
     expect(externalDocs.url).toBe(url);
     expect(externalDocs.description).toMatch(/\S/);
+    if (url === "/guides/catalog-formats.md") {
+      expect(externalDocs.description).toBe("Compare the available catalog export formats.");
+    }
     const guide = await request.get(externalDocs.url);
     expect(guide.status()).toBe(200);
+    if (url === "/guides/catalog-formats.md") {
+      expect(guide.headers()["content-type"]).toMatch(/^text\/markdown(?:;|$)/);
+    }
     expect((await guide.text()).split(/\r?\n/, 1)[0]).toBe(title);
   }
 });
