@@ -29,35 +29,28 @@ const initializeDate = `(() => {
   else field.removeAttribute('aria-describedby');
 })();`;
 
-// A native fragment landing can remain pending while the parser is streaming.
-// Commit the real fragment without leaving its focus reset to the end of the stream.
-const activateCalendarShortcut = `(() => {
-  const shortcut = document.querySelector('.calendar-skip-link');
+// Chromium can resolve the current fragment again when the parser finishes.
+// After a real landing and departure, exclude the heading from that one lookup
+// without changing the URL, history, focus, or the region's accessible name.
+const preserveCalendarLanding = `(() => {
   const heading = document.getElementById('calendar-title');
-  const navigation = window.navigation;
-  if (!shortcut || !heading || !navigation || document.readyState !== 'loading') return;
-  const activation = {};
-  const intercept = (event) => {
-    if (!event.canIntercept || event.destination.url !== shortcut.href ||
-        (event.sourceElement !== shortcut && event.info !== activation)) return;
-    event.intercept({
-      scroll: 'manual',
-      focusReset: 'manual',
-      handler: () => {
-        heading.focus({ preventScroll: true });
-        heading.scrollIntoView();
-      },
-    });
-  };
-  navigation.addEventListener('navigate', intercept);
-  if (location.hash === shortcut.hash &&
-      (document.activeElement === document.body || document.activeElement === heading)) {
-    navigation.navigate(location.href, {
-      history: 'replace', state: navigation.currentEntry?.getState(), info: activation,
-    });
+  if (!heading || document.readyState !== 'loading') return;
+  const hash = '#calendar-title';
+  let leftLanding = false;
+  const landed = () => { leftLanding = false; };
+  const departed = () => { leftLanding = location.hash === hash; };
+  heading.addEventListener('focus', landed);
+  heading.addEventListener('blur', departed);
+  if (location.hash === hash && document.activeElement === document.body) {
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView();
   }
   document.addEventListener('DOMContentLoaded', () => {
-    navigation.removeEventListener('navigate', intercept);
+    heading.removeEventListener('focus', landed);
+    heading.removeEventListener('blur', departed);
+    if (!leftLanding || location.hash !== hash || document.activeElement === heading) return;
+    heading.removeAttribute('id');
+    setTimeout(() => { heading.id = 'calendar-title'; }, 0);
   }, { once: true });
 })();`;
 
@@ -137,11 +130,11 @@ export default function SkyNotes({ searchParams }: { searchParams: Query }) {
         For faint stars, look for a clear, moonless stretch of night. Start with the Moon’s
         calendar.
       </p>
-      <section className={styles.calendar} aria-labelledby="calendar-title">
-        <h2 id="calendar-title" tabIndex={-1}>
-          Moon calendar
+      <section className={styles.calendar} aria-labelledby="calendar-label">
+        <h2 id="calendar-title" tabIndex={-1} suppressHydrationWarning>
+          <span id="calendar-label">Moon calendar</span>
         </h2>
-        <script>{activateCalendarShortcut}</script>
+        <script>{preserveCalendarLanding}</script>
         <CalendarForm>
           <Suspense
             fallback={

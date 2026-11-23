@@ -302,6 +302,17 @@ for (const { schedule, entry, edit } of streamCases) {
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-29");
       await expect(field).toHaveValue("2028-12-29");
       await expect(submit).toBeFocused();
+
+      // A different search date must override a dirty field on history traversal.
+      await field.fill("2028-12-28");
+      await page.goBack();
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+      await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
+      await expect(field).toHaveValue("2028-12-31");
+      await page.goForward();
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-29$/);
+      await expect(field).toHaveValue("2028-12-29");
+      await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
     } finally {
       releaseTail();
       releaseBundles();
