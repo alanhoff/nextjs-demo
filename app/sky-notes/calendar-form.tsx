@@ -25,6 +25,8 @@ export function CalendarForm({ children }: { children: ReactNode }) {
     field.setAttribute("aria-invalid", String(date === null));
     if (date === null) field.setAttribute("aria-describedby", "invalid-date");
     else field.removeAttribute("aria-describedby");
+    // Distinguish client initialization from the inline streamed initialization.
+    field.setAttribute("data-calendar-initialized", "true");
   }, [selection]);
 
   return (

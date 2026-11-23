@@ -171,7 +171,7 @@ for (const value of ["2028-12-30", ""]) {
       await expect(field).toHaveValue(value);
       await expect(field).toBeFocused();
       releaseBundles();
-      await page.waitForLoadState("load");
+      await expect(field).toHaveAttribute("data-calendar-initialized", "true");
       await expect(field).toHaveValue(value);
       await expect(field).toBeFocused();
 
@@ -204,6 +204,8 @@ test("the moon calendar crosses year-end and rejects impossible dates", async ({
   const date = page.getByLabel("Starting date (UTC)");
   await expect(date).toHaveAttribute("aria-invalid", "true");
   await expect(date).toHaveValue("");
+  await expect(date).toHaveAttribute("data-calendar-initialized", "true");
+  await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
   await date.fill("2028-12-31");
   await page.getByRole("button", { name: "Show phases" }).click();
   await expect(date).toHaveAttribute("aria-invalid", "false");
@@ -217,6 +219,27 @@ test("the moon calendar crosses year-end and rejects impossible dates", async ({
   const download = page.getByRole("link", { name: "Download lunar calendar" });
   await expect(download).toBeVisible();
   await expect(download).toHaveAttribute("href", "/sky-notes/calendar.ics?date=2028-12-31");
+
+  await date.fill("2028-12-29");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/sky-notes\?date=2028-02-30$/);
+  await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
+  await expect(date).toHaveValue("");
+  await expect(date).toHaveJSProperty("defaultValue", "");
+  await expect(date).toHaveAttribute("aria-invalid", "true");
+  await expect(date).toHaveAttribute("aria-describedby", "invalid-date");
+  await expect(page.locator("#invalid-date")).toBeVisible();
+
+  await date.fill("2028-12-30");
+  await page.goForward();
+  await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
+  await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
+  await expect(date).toHaveValue("2028-12-31");
+  await expect(date).toHaveJSProperty("defaultValue", "2028-12-31");
+  await expect(date).toHaveAttribute("aria-invalid", "false");
+  await expect(date).not.toHaveAttribute("aria-describedby", /.+/);
+  await expect(page.locator("#invalid-date")).toHaveCount(0);
+  await expect(phases).toHaveCount(4);
 });
 
 test("the lunar calendar exports four UTC events with stable UIDs", async ({ request }) => {
