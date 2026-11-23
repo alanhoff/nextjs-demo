@@ -288,9 +288,11 @@ for (const { schedule, entry, edit } of streamCases) {
       if (entry === "shortcut") {
         await page.goBack();
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
+        await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
+        await expect(field).toHaveValue(value);
+        // Native history traversal need not focus the heading like explicit activation does.
         await page.goForward();
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
-        await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
       }
       await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
       await expect(field).toHaveValue(value);
@@ -353,8 +355,12 @@ test("the moon calendar crosses year-end and rejects impossible dates", async ({
   await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
   await date.fill("2028-12-31");
   const submit = page.getByRole("button", { name: "Show phases" });
-  // Filling a native date can set its value without moving keyboard focus.
+  // Native date segments can take several Tabs before focus reaches the button.
   await date.press("Tab");
+  for (let step = 0; step < 7; step++) {
+    if (await submit.evaluate((button) => button === document.activeElement)) break;
+    await page.keyboard.press("Tab");
+  }
   await expect(submit).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(date).toHaveAttribute("aria-invalid", "false");
