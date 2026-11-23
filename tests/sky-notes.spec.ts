@@ -286,13 +286,37 @@ for (const { schedule, entry, edit } of streamCases) {
       await focusTransitions.dispose();
       await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
       if (entry === "shortcut") {
+        // Observe script calls without constraining the browser's native focus restoration.
+        const heading = page.getByRole("heading", { name: "Moon calendar", exact: true });
+        const scriptedFocus = await heading.evaluateHandle((node: HTMLElement) => {
+          const calls: string[] = [];
+          const focus = node.focus;
+          node.focus = (options) => {
+            calls.push(location.hash);
+            focus.call(node, options);
+          };
+          return calls;
+        });
         await page.goBack();
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
         await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
         await expect(field).toHaveValue(value);
-        // Native history traversal need not focus the heading like explicit activation does.
+        const forwardHashChange = await page.evaluateHandle(() => ({
+          done: new Promise<void>((resolve) => {
+            window.addEventListener("hashchange", function onHashChange(event) {
+              if (new URL(event.newURL).hash !== "#calendar-title") return;
+              window.removeEventListener("hashchange", onHashChange);
+              resolve();
+            });
+          }),
+        }));
         await page.goForward();
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+        await forwardHashChange.evaluate(({ done }) => done);
+        await forwardHashChange.dispose();
+        await heading.evaluate((node) => Reflect.deleteProperty(node, "focus"));
+        expect(await scriptedFocus.jsonValue()).toEqual([]);
+        await scriptedFocus.dispose();
       }
       await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
       await expect(field).toHaveValue(value);
