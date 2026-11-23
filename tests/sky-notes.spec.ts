@@ -123,8 +123,8 @@ for (const query of [
   });
 }
 
-for (const value of ["2028-12-30", ""]) {
-  test(`a shell edit survives streaming and hydration (${value || "cleared"})`, async ({
+for (const edit of ["typed", "cleared", "clicked away"] as const) {
+  test(`a shell edit survives streaming and hydration (${edit})`, async ({
     page,
     request,
   }) => {
@@ -189,18 +189,24 @@ for (const value of ["2028-12-30", ""]) {
       await expect(field).toBeFocused();
       for (const digit of "12302028") await page.keyboard.press(digit);
       await expect(field).toHaveValue("2028-12-30");
-      if (!value) await page.keyboard.press("Backspace");
+      const value = edit === "cleared" ? "" : "2028-12-30";
+      if (edit === "cleared") await page.keyboard.press("Backspace");
       await expect(field).toHaveValue(value);
       await expect(field).toBeFocused();
+      const focused = edit === "clicked away" ? page.locator("body") : field;
+      if (edit === "clicked away") {
+        await page.getByRole("heading", { name: "Sky notes", exact: true }).click();
+      }
+      await expect(focused).toBeFocused();
       releaseTail();
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
       await expect(field).toHaveValue(value);
-      await expect(field).toBeFocused();
+      await expect(focused).toBeFocused();
       releaseBundles();
       await page.waitForLoadState("load");
       await expect(field).toHaveAttribute("data-calendar-initialized", "true");
       await expect(field).toHaveValue(value);
-      await expect(field).toBeFocused();
+      await expect(focused).toBeFocused();
 
       await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
       await field.fill("2028-12-29");

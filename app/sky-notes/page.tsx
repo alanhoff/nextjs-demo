@@ -36,17 +36,27 @@ const preserveCalendarFocus = `(() => {
   const controller = new AbortController();
   const options = { capture: true, signal: controller.signal };
   let landed = false;
+  let departed = false;
+  const reset = () => {
+    landed = false;
+    departed = false;
+  };
   document.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest('.calendar-skip-link')) landed = false;
+    if (event.target instanceof Element && event.target.closest('.calendar-skip-link')) reset();
   }, options);
-  window.addEventListener('popstate', () => {
-    if (location.hash !== '#calendar-title') landed = false;
+  window.addEventListener('popstate', reset, options);
+  heading.addEventListener('blur', () => {
+    if (landed) departed = true;
   }, options);
   heading.addEventListener('focus', (event) => {
     if (location.hash !== '#calendar-title') return;
     const previous = event.relatedTarget;
-    if (landed && previous instanceof HTMLElement && previous.isConnected) {
-      previous.focus({ preventScroll: true });
+    if (departed) {
+      if (previous instanceof HTMLElement && previous.isConnected && previous !== document.body) {
+        previous.focus({ preventScroll: true });
+      } else {
+        heading.blur();
+      }
       return;
     }
     landed = true;
