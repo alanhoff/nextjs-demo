@@ -29,40 +29,32 @@ const initializeDate = `(() => {
   else field.removeAttribute('aria-describedby');
 })();`;
 
-// The browser can retry fragment landing as the document finishes loading.
-// Land immediately, but keep the fragment out of the URL until that work is done.
+// A native fragment landing can remain pending while the parser is streaming.
+// Retire it with a same-document navigation before recording the public URL.
 const activateCalendarShortcut = `(() => {
   const shortcut = document.querySelector('.calendar-skip-link');
   const heading = document.getElementById('calendar-title');
   if (!shortcut || !heading) return;
-  let pending = null;
+  const land = (replace) => {
+    const state = history.state;
+    // A fragment with no target supersedes native landing without focusing anything.
+    // Replace that URL in the same turn, without starting another native landing.
+    const noTarget = '#calendar-title--no-target';
+    if (replace) location.replace(noTarget);
+    else location.hash = noTarget;
+    history.replaceState(state, '', shortcut.hash);
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView();
+  };
+  if (location.hash === shortcut.hash &&
+      (document.activeElement === document.body || document.activeElement === heading)) {
+    land(true);
+  }
   const activate = (event) => {
     if (document.readyState !== 'loading' || event.defaultPrevented ||
         event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     event.preventDefault();
-    if (location.hash !== shortcut.hash && !pending) {
-      const from = location.href;
-      const fragment = shortcut.hash;
-      pending = new AbortController();
-      const { signal } = pending;
-      const cancel = () => {
-        pending.abort();
-        pending = null;
-      };
-      for (const type of ['popstate', 'hashchange', 'pagehide']) {
-        window.addEventListener(type, cancel, { signal });
-      }
-      window.addEventListener('load', () => {
-        // Run after load dispatch, not during the browser's final fragment processing.
-        setTimeout(() => {
-          if (signal.aborted) return;
-          cancel();
-          if (location.href === from) history.pushState(history.state, '', fragment);
-        }, 0);
-      }, { once: true, signal });
-    }
-    heading.focus({ preventScroll: true });
-    heading.scrollIntoView();
+    land(location.hash === shortcut.hash);
   };
   shortcut.addEventListener('click', activate);
   document.addEventListener('DOMContentLoaded', () => {

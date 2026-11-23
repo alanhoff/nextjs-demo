@@ -123,8 +123,15 @@ for (const query of [
   });
 }
 
-for (const edit of ["typed", "cleared", "clicked away"] as const) {
-  test(`a shell edit survives streaming and hydration (${edit})`, async ({
+for (const [entry, edit] of [
+  ["shortcut", "typed"],
+  ["shortcut", "cleared"],
+  ["shortcut", "clicked away"],
+  ["fragment", "typed"],
+  ["fragment", "cleared"],
+  ["fragment", "clicked away"],
+] as const) {
+  test(`a shell edit survives streaming and hydration (${entry}, ${edit})`, async ({
     page,
     request,
   }) => {
@@ -175,15 +182,21 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
     try {
       const address = server.address();
       if (!address || typeof address === "string") throw new Error("Expected a TCP test server");
-      await page.goto(`http://127.0.0.1:${address.port}${path}`, { waitUntil: "commit" });
-      const first = page.getByRole("link", { name: "Skip to content" });
-      await expect(first).toBeVisible();
-      await page.keyboard.press("Tab");
-      await expect(first).toBeFocused();
-      await page.keyboard.press("Tab");
-      await expect(page.getByRole("link", { name: "Skip to moon calendar" })).toBeFocused();
-      await page.keyboard.press("Enter");
+      const initialHash = entry === "fragment" ? "#calendar-title" : "";
+      await page.goto(`http://127.0.0.1:${address.port}${path}${initialHash}`, {
+        waitUntil: "commit",
+      });
+      if (entry === "shortcut") {
+        const first = page.getByRole("link", { name: "Skip to content" });
+        await expect(first).toBeVisible();
+        await page.keyboard.press("Tab");
+        await expect(first).toBeFocused();
+        await page.keyboard.press("Tab");
+        await expect(page.getByRole("link", { name: "Skip to moon calendar" })).toBeFocused();
+        await page.keyboard.press("Enter");
+      }
       await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
       await page.keyboard.press("Tab");
       const field = page.getByLabel("Starting date (UTC)");
       await expect(field).toBeFocused();
@@ -208,7 +221,7 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
         });
         return transitions;
       });
-      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
       releaseTail();
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
       await expect(field).toHaveValue(value);
@@ -220,7 +233,7 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
       const diagnostic = JSON.stringify({ ...streamed, transitions });
       expect(streamed, diagnostic).toEqual({
         activeElement: edit === "clicked away" ? "BODY" : "start-date",
-        hash: "",
+        hash: "#calendar-title",
       });
       expect(transitions, diagnostic).toEqual([]);
       await expect(focused, diagnostic).toBeFocused();
@@ -235,10 +248,12 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
       expect(await focusTransitions.jsonValue()).toEqual([]);
       await focusTransitions.dispose();
       await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
-      await page.goBack();
-      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
-      await page.goForward();
-      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+      if (entry === "shortcut") {
+        await page.goBack();
+        await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
+        await page.goForward();
+        await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+      }
       await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
       await expect(field).toHaveValue(value);
       await field.fill("2028-12-29");
