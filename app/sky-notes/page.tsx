@@ -29,17 +29,38 @@ const initializeDate = `(() => {
   else field.removeAttribute('aria-describedby');
 })();`;
 
-// Native fragment navigation during parsing can retry at the end of the stream,
-// interrupting an edit. Record the fragment without scheduling that navigation.
+// The browser can retry fragment landing as the document finishes loading.
+// Land immediately, but keep the fragment out of the URL until that work is done.
 const activateCalendarShortcut = `(() => {
   const shortcut = document.querySelector('.calendar-skip-link');
   const heading = document.getElementById('calendar-title');
   if (!shortcut || !heading) return;
+  let pending = null;
   const activate = (event) => {
     if (document.readyState !== 'loading' || event.defaultPrevented ||
         event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     event.preventDefault();
-    if (location.hash !== shortcut.hash) history.pushState(history.state, '', shortcut.hash);
+    if (location.hash !== shortcut.hash && !pending) {
+      const from = location.href;
+      const fragment = shortcut.hash;
+      pending = new AbortController();
+      const { signal } = pending;
+      const cancel = () => {
+        pending.abort();
+        pending = null;
+      };
+      for (const type of ['popstate', 'hashchange', 'pagehide']) {
+        window.addEventListener(type, cancel, { signal });
+      }
+      window.addEventListener('load', () => {
+        // Run after load dispatch, not during the browser's final fragment processing.
+        setTimeout(() => {
+          if (signal.aborted) return;
+          cancel();
+          if (location.href === from) history.pushState(history.state, '', fragment);
+        }, 0);
+      }, { once: true, signal });
+    }
     heading.focus({ preventScroll: true });
     heading.scrollIntoView();
   };

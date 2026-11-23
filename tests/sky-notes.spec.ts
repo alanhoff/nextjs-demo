@@ -208,20 +208,33 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
         });
         return transitions;
       });
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
       releaseTail();
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
       await expect(field).toHaveValue(value);
-      await expect(focused).toBeFocused();
+      const streamed = await page.evaluate(() => ({
+        activeElement: document.activeElement?.id || document.activeElement?.tagName,
+        hash: location.hash,
+      }));
+      const transitions = await focusTransitions.jsonValue();
+      const diagnostic = JSON.stringify({ ...streamed, transitions });
+      expect(streamed, diagnostic).toEqual({
+        activeElement: edit === "clicked away" ? "BODY" : "start-date",
+        hash: "",
+      });
+      expect(transitions, diagnostic).toEqual([]);
+      await expect(focused, diagnostic).toBeFocused();
       releaseBundles();
       await page.waitForLoadState("load");
       await expect(field).toHaveAttribute("data-calendar-initialized", "true");
       await expect(field).toHaveValue(value);
       await expect(focused).toBeFocused();
 
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+      await expect(focused).toBeFocused();
       expect(await focusTransitions.jsonValue()).toEqual([]);
       await focusTransitions.dispose();
       await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
-      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
       await page.goBack();
       await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
       await page.goForward();
