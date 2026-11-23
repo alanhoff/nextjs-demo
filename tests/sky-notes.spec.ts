@@ -25,6 +25,45 @@ for (const width of [390, 1440]) {
   });
 }
 
+test("the calendar shortcut works on a fresh document without hydration", async ({ page }) => {
+  // Block application bundles, not the inline scripts that reveal streamed HTML.
+  await page.route("**/_next/static/**/*.js", (route) => route.abort());
+  await page.goto("/sky-notes", { waitUntil: "commit" });
+  const shortcut = page.getByRole("link", { name: "Skip to moon calendar", exact: true });
+  await expect(shortcut).toBeVisible();
+  await page.evaluate(() => document.documentElement.setAttribute("data-keyboard-test", "fresh"));
+
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(shortcut).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/sky-notes#calendar-title$/);
+  await expect(page.locator("html")).toHaveAttribute("data-keyboard-test", "fresh");
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Starting date (UTC)")).toBeFocused();
+});
+
+test("a calendar in a hidden stream container does not expose the shortcut", async ({ page }) => {
+  await page.route("**/_next/static/**/*.js", (route) => route.abort());
+  await page.goto("/sky-notes");
+  const heading = page.getByRole("heading", { name: "Moon calendar", exact: true });
+  // Model the streamed segment before React moves its contents out of the hidden wrapper.
+  await heading.evaluate((element) => {
+    const calendar = element.closest("section");
+    if (!calendar) throw new Error("Missing calendar section");
+    const segment = document.createElement("div");
+    segment.hidden = true;
+    calendar.before(segment);
+    segment.append(calendar);
+  });
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Night Atlas home" })).toBeFocused();
+});
+
 test("the atlas keeps its original skip link before the masthead", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Skip to moon calendar", exact: true })).toHaveCount(0);
