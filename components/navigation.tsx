@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 import { Mark } from "./marks";
 
 export function Navigation() {
-  const path = usePathname();
+  return <NavigationLinks path={usePathname()} />;
+}
+
+export function NavigationLinks({ path = "" }: { path?: string }) {
   const atlas = path === "/" || path.startsWith("/sites/") || path.startsWith("/plates/");
   return (
     <nav aria-label="Main navigation" className="main-nav">

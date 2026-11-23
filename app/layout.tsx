@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
-import { CalendarSkipLink } from "@/components/calendar-skip-link";
+import { Suspense } from "react";
 import { Compass } from "@/components/marks";
-import { Navigation } from "@/components/navigation";
+import { Navigation, NavigationLinks } from "@/components/navigation";
 import { siteOrigin } from "@/lib/origin";
 import "./globals.css";
 
@@ -30,21 +30,23 @@ export const metadata: Metadata = {
     "Find a place to stargaze in six U.S. national parks, check the moon, and keep a personal logbook of observing sites.",
 };
 
-export default function RootLayout({ children, viewer }: LayoutProps<"/">) {
+export default function RootLayout({ calendarShortcut, children, viewer }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
       <body>
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
-        <CalendarSkipLink />
+        {calendarShortcut}
         <header className="masthead">
           <div className="shell masthead-inner">
             <Link className="wordmark" href="/" aria-label="Night Atlas home">
               <Compass />
               Night Atlas
             </Link>
-            <Navigation />
+            <Suspense fallback={<NavigationLinks />}>
+              <Navigation />
+            </Suspense>
           </div>
         </header>
         {children}

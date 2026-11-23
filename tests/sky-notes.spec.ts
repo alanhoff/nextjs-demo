@@ -231,6 +231,7 @@ for (const { schedule, entry, edit } of streamCases) {
       await page.keyboard.press("Tab");
       const field = page.getByLabel("Starting date (UTC)");
       await expect(field).toBeFocused();
+      const originalField = await field.elementHandle();
       for (const digit of "12302028") await page.keyboard.press(digit);
       await expect(field).toHaveValue("2028-12-30");
       const value = edit === "cleared" ? "" : "2028-12-30";
@@ -256,6 +257,7 @@ for (const { schedule, entry, edit } of streamCases) {
       releaseTail();
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
       await expect(field).toHaveValue(value);
+      expect(await field.evaluate((node, original) => node === original, originalField)).toBe(true);
       const streamed = await page.evaluate(() => ({
         activeElement: document.activeElement?.id || document.activeElement?.tagName,
         hash: location.hash,
@@ -271,6 +273,8 @@ for (const { schedule, entry, edit } of streamCases) {
       releaseBundles();
       await page.waitForLoadState("load");
       await expect(field).toHaveAttribute("data-calendar-initialized", "true");
+      expect(await field.evaluate((node, original) => node === original, originalField)).toBe(true);
+      await originalField.dispose();
       await expect(field).toHaveValue(value);
       await expect(focused).toBeFocused();
 
@@ -291,11 +295,13 @@ for (const { schedule, entry, edit } of streamCases) {
       await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
       await expect(field).toHaveValue(value);
       await field.fill("2028-12-29");
-      await page.getByRole("button", { name: "Show phases" }).click();
+      const submit = page.getByRole("button", { name: "Show phases" });
+      await submit.click();
       await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-29$/);
       await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-29");
       await expect(field).toHaveValue("2028-12-29");
+      await expect(submit).toBeFocused();
     } finally {
       releaseTail();
       releaseBundles();
@@ -314,6 +320,18 @@ test("the atlas keeps its original skip link before the masthead", async ({ page
   await expect(page.getByRole("link", { name: "Night Atlas home" })).toBeFocused();
 });
 
+test("the server shortcut slot follows navigation between the atlas and Sky notes", async ({ page }) => {
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  const shortcut = page.getByRole("link", { name: "Skip to moon calendar" });
+  await nav.getByRole("link", { name: "Sky notes" }).click();
+  await expect(page).toHaveURL(/\/sky-notes$/);
+  await expect(shortcut).toHaveCount(1);
+  await nav.getByRole("link", { name: "Atlas" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(shortcut).toHaveCount(0);
+});
+
 test("the moon calendar crosses year-end and rejects impossible dates", async ({ page }) => {
   await page.goto("/sky-notes?date=2028-02-30");
   await expect(page.getByText("Choose a date from 1700 through 2099.")).toBeVisible();
@@ -323,13 +341,17 @@ test("the moon calendar crosses year-end and rejects impossible dates", async ({
   await expect(date).toHaveAttribute("data-calendar-initialized", "true");
   await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
   await date.fill("2028-12-31");
-  await page.getByRole("button", { name: "Show phases" }).click();
+  const submit = page.getByRole("button", { name: "Show phases" });
+  await page.keyboard.press("Tab");
+  await expect(submit).toBeFocused();
+  await page.keyboard.press("Enter");
   await expect(date).toHaveAttribute("aria-invalid", "false");
   await expect(date).toHaveValue("2028-12-31");
   await expect(date).toHaveJSProperty("defaultValue", "2028-12-31");
   await expect(date).not.toHaveAttribute("aria-describedby", /.+/);
   const phases = page.getByRole("list", { name: "Next four moon phases" }).getByRole("listitem");
   await expect(phases).toHaveCount(4);
+  await expect(submit).toBeFocused();
   await expect(phases.first().locator("time")).toHaveAttribute("datetime", "2028-12-31T16:48:00Z");
   await expect(phases.last().locator("time")).toHaveAttribute("datetime", "2029-01-22T19:23:00Z");
   const download = page.getByRole("link", { name: "Download lunar calendar" });
