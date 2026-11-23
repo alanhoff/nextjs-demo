@@ -198,6 +198,16 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
         await page.getByRole("heading", { name: "Sky notes", exact: true }).click();
       }
       await expect(focused).toBeFocused();
+      const focusTransitions = await page.evaluateHandle(() => {
+        const transitions: string[] = [];
+        document.getElementById("start-date")?.addEventListener("blur", () => {
+          transitions.push("date blurred");
+        });
+        document.getElementById("calendar-title")?.addEventListener("focus", () => {
+          transitions.push("heading focused");
+        });
+        return transitions;
+      });
       releaseTail();
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
       await expect(field).toHaveValue(value);
@@ -208,7 +218,16 @@ for (const edit of ["typed", "cleared", "clicked away"] as const) {
       await expect(field).toHaveValue(value);
       await expect(focused).toBeFocused();
 
+      expect(await focusTransitions.jsonValue()).toEqual([]);
+      await focusTransitions.dispose();
       await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+      await page.goBack();
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
+      await page.goForward();
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+      await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
+      await expect(field).toHaveValue(value);
       await field.fill("2028-12-29");
       await page.getByRole("button", { name: "Show phases" }).click();
       await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-29$/);

@@ -29,39 +29,24 @@ const initializeDate = `(() => {
   else field.removeAttribute('aria-describedby');
 })();`;
 
-// A fragment activated during parsing can be focused again when the document
-// finishes loading. Keep the user's later focus without changing hash history.
-const preserveCalendarFocus = `(() => {
+// Native fragment navigation during parsing can retry at the end of the stream,
+// interrupting an edit. Record the fragment without scheduling that navigation.
+const activateCalendarShortcut = `(() => {
+  const shortcut = document.querySelector('.calendar-skip-link');
   const heading = document.getElementById('calendar-title');
-  const controller = new AbortController();
-  const options = { capture: true, signal: controller.signal };
-  let landed = false;
-  let departed = false;
-  const reset = () => {
-    landed = false;
-    departed = false;
+  if (!shortcut || !heading) return;
+  const activate = (event) => {
+    if (document.readyState !== 'loading' || event.defaultPrevented ||
+        event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    if (location.hash !== shortcut.hash) history.pushState(history.state, '', shortcut.hash);
+    heading.focus({ preventScroll: true });
+    heading.scrollIntoView();
   };
-  document.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest('.calendar-skip-link')) reset();
-  }, options);
-  window.addEventListener('popstate', reset, options);
-  heading.addEventListener('blur', () => {
-    if (landed) departed = true;
-  }, options);
-  heading.addEventListener('focus', (event) => {
-    if (location.hash !== '#calendar-title') return;
-    const previous = event.relatedTarget;
-    if (departed) {
-      if (previous instanceof HTMLElement && previous.isConnected && previous !== document.body) {
-        previous.focus({ preventScroll: true });
-      } else {
-        heading.blur();
-      }
-      return;
-    }
-    landed = true;
-  }, options);
-  window.addEventListener('pageshow', () => controller.abort(), { once: true });
+  shortcut.addEventListener('click', activate);
+  document.addEventListener('DOMContentLoaded', () => {
+    shortcut.removeEventListener('click', activate);
+  }, { once: true });
 })();`;
 
 async function CalendarResults({ searchParams }: { searchParams: Query }) {
@@ -144,7 +129,7 @@ export default function SkyNotes({ searchParams }: { searchParams: Query }) {
         <h2 id="calendar-title" tabIndex={-1}>
           Moon calendar
         </h2>
-        <script>{preserveCalendarFocus}</script>
+        <script>{activateCalendarShortcut}</script>
         <CalendarForm>
           <Suspense
             fallback={
