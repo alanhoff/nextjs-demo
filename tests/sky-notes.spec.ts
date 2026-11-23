@@ -27,6 +27,69 @@ for (const width of [390, 1440]) {
   });
 }
 
+test("planner history restores the search date after the keyboard shortcut", async ({ page }) => {
+  const invalid = "/sky-notes?date=2028-02-30";
+  const valid = "/sky-notes?date=2028-12-31";
+  await page.goto(invalid);
+  const field = page.getByLabel("Starting date (UTC)");
+  const error = page.locator("#invalid-date");
+  const phases = page.getByRole("list", { name: "Next four moon phases" }).getByRole("listitem");
+  await expect(field).toHaveAttribute("data-calendar-initialized", "true");
+  const documentHandle = await page.evaluateHandle(() => document);
+  const assertDocument = async () => {
+    expect(await page.evaluate((original) => document === original, documentHandle)).toBe(true);
+  };
+  const assertInvalid = async () => {
+    await expect(field).toHaveValue("");
+    await expect(field).toHaveJSProperty("defaultValue", "");
+    await expect(field).toHaveAttribute("aria-invalid", "true");
+    await expect(field).toHaveAttribute("aria-describedby", "invalid-date");
+    await expect(error).toHaveText("Choose a date from 1700 through 2099.");
+    await expect(error).toBeVisible();
+    await expect(phases).toHaveCount(0);
+  };
+  const assertValid = async () => {
+    await expect(field).toHaveValue("2028-12-31");
+    await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
+    await expect(field).toHaveAttribute("aria-invalid", "false");
+    await expect(field).not.toHaveAttribute("aria-describedby", /.+/);
+    await expect(error).toHaveCount(0);
+    await expect(phases).toHaveCount(4);
+    const expected = phaseArchive.filter(({ at }) => at >= "2028-12-31").slice(0, 4);
+    for (const [index, { name, at }] of expected.entries()) {
+      await expect(phases.nth(index).getByRole("heading")).toHaveText(name);
+      await expect(phases.nth(index).locator("time")).toHaveAttribute("datetime", at);
+    }
+    await assertDocument();
+  };
+  await assertInvalid();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to moon calendar" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(`${invalid}#calendar-title`);
+  await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(field).toBeFocused();
+  for (const digit of "12312028") await page.keyboard.press(digit);
+  await expect(field).toHaveValue("2028-12-31");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Show phases" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(valid);
+  await assertValid();
+
+  await page.goBack();
+  await expect(page).toHaveURL(`${invalid}#calendar-title`);
+  await assertInvalid();
+  await assertDocument();
+
+  await page.goForward();
+  await expect(page).toHaveURL(valid);
+  await assertValid();
+});
+
 test("the calendar shortcut works on a fresh document without hydration", async ({ page }) => {
   // Block application bundles, not the inline scripts that reveal streamed HTML.
   await page.route("**/_next/static/**/*.js", (route) => route.abort());
