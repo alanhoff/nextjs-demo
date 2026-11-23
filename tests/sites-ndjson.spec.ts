@@ -55,3 +55,45 @@ test("NDJSON exports full canonical sites in order with an LF after each record"
     });
   }
 });
+
+test("NDJSON filters by exact state without changing serialization or download caching", async ({ request }) => {
+  const full = await request.get("/api/sites.ndjson");
+  const lines = (await full.text()).trimEnd().split("\n");
+
+  for (const [state, download] of [
+    ["Maine", "0"],
+    ["California", "1"],
+  ]) {
+    const path = `/api/sites.ndjson?state=${state}&download=${download}&region=Atlantis`;
+    const matching = lines.filter((line) => JSON.parse(line).state === state);
+    expect(matching.length).toBeGreaterThan(0);
+    const expected = `${matching.join("\n")}\n`;
+    const response = await request.get(path);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("application/x-ndjson");
+    expect(response.headers()["content-disposition"]).toBe(
+      download === "1" ? 'attachment; filename="night-atlas-sites.ndjson"' : undefined,
+    );
+    expect(await response.text()).toBe(expected);
+
+    const etag = `W/"ndjson-${createHash("sha256").update(expected).digest("hex")}"`;
+    expect(response.headers().etag).toBe(etag);
+    const cached = await request.get(path, { headers: { "If-None-Match": etag } });
+    expect(cached.status()).toBe(304);
+    expect(cached.headers().etag).toBe(etag);
+    expect(await cached.body()).toHaveLength(0);
+  }
+
+  for (const state of ["", "Atlantis", "maine"]) {
+    const response = await request.get(`/api/sites.ndjson?state=${state}`);
+    expect(response.status()).toBe(200);
+    expect(response.headers()["content-type"]).toBe("application/x-ndjson");
+    expect(await response.body()).toHaveLength(0);
+  }
+
+  for (const second of ["Maine", "California"]) {
+    const response = await request.get(`/api/sites.ndjson?state=Maine&state=${second}`);
+    expect(response.status()).toBe(400);
+    expect(await response.json()).toEqual({ error: "Use the state filter only once." });
+  }
+});

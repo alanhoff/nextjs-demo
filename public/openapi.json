@@ -123,13 +123,20 @@
       "get": {
         "operationId": "exportSitesNdjson",
         "tags": ["Exports"],
-        "summary": "Download the full catalog as newline-delimited JSON",
+        "summary": "Export catalog sites as newline-delimited JSON",
         "externalDocs": {
           "description": "Compare the available catalog export formats.",
           "url": "/guides/catalog-formats.md"
         },
         "parameters": [
           { "$ref": "#/components/parameters/IfNoneMatch" },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "description": "Exact case-sensitive state name. Unknown or empty values match no sites. Use this parameter only once.",
+            "schema": { "type": "string" }
+          },
           {
             "name": "download",
             "in": "query",
@@ -154,6 +161,10 @@
           "304": {
             "description": "The selected representation matches If-None-Match. No body.",
             "headers": { "ETag": { "$ref": "#/components/headers/ETag" } }
+          },
+          "400": {
+            "description": "Repeated state parameter.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
           }
         }
       }
