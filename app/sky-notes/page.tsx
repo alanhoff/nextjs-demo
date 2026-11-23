@@ -30,35 +30,34 @@ const initializeDate = `(() => {
 })();`;
 
 // A native fragment landing can remain pending while the parser is streaming.
-// Retire it with a same-document navigation before recording the public URL.
+// Commit the real fragment without leaving its focus reset to the end of the stream.
 const activateCalendarShortcut = `(() => {
   const shortcut = document.querySelector('.calendar-skip-link');
   const heading = document.getElementById('calendar-title');
-  if (!shortcut || !heading) return;
-  const land = (replace) => {
-    const state = history.state;
-    // A fragment with no target supersedes native landing without focusing anything.
-    // Replace that URL in the same turn, without starting another native landing.
-    const noTarget = '#calendar-title--no-target';
-    if (replace) location.replace(noTarget);
-    else location.hash = noTarget;
-    history.replaceState(state, '', shortcut.hash);
-    heading.focus({ preventScroll: true });
-    heading.scrollIntoView();
+  const navigation = window.navigation;
+  if (!shortcut || !heading || !navigation || document.readyState !== 'loading') return;
+  const activation = {};
+  const intercept = (event) => {
+    if (!event.canIntercept || event.destination.url !== shortcut.href ||
+        (event.sourceElement !== shortcut && event.info !== activation)) return;
+    event.intercept({
+      scroll: 'manual',
+      focusReset: 'manual',
+      handler: () => {
+        heading.focus({ preventScroll: true });
+        heading.scrollIntoView();
+      },
+    });
   };
+  navigation.addEventListener('navigate', intercept);
   if (location.hash === shortcut.hash &&
       (document.activeElement === document.body || document.activeElement === heading)) {
-    land(true);
+    navigation.navigate(location.href, {
+      history: 'replace', state: navigation.currentEntry?.getState(), info: activation,
+    });
   }
-  const activate = (event) => {
-    if (document.readyState !== 'loading' || event.defaultPrevented ||
-        event.button !== 0 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    event.preventDefault();
-    land(location.hash === shortcut.hash);
-  };
-  shortcut.addEventListener('click', activate);
   document.addEventListener('DOMContentLoaded', () => {
-    shortcut.removeEventListener('click', activate);
+    navigation.removeEventListener('navigate', intercept);
   }, { once: true });
 })();`;
 

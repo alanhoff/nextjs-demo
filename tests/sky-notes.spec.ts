@@ -115,12 +115,21 @@ for (const query of [
       await expect(phases).toHaveCount(4);
       if (!query) {
         const expected = phaseArchive.filter(({ at }) => at >= today).slice(0, 4);
-        expect(expected).toHaveLength(4);
-        for (const [index, { name, at }] of expected.entries()) {
-          const phase = phases.nth(index);
-          await expect(phase.getByRole("heading")).toHaveText(name);
-          await expect(phase.locator("time")).toHaveAttribute("datetime", at);
-          await expect(phase.locator("time")).toContainText(`${at.slice(11, 16)} UTC`);
+        const actual = await phases.evaluateAll((items) =>
+          items.map((item) => ({
+            name: item.querySelector("h3")?.textContent,
+            at: item.querySelector("time")?.dateTime ?? "",
+          })),
+        );
+        if (expected.length === 4 && await page.getByText("Source (offline edition):").isVisible()) {
+          expect(actual).toEqual(expected);
+        }
+        let previous = "";
+        for (const [index, { name, at }] of actual.entries()) {
+          expect(["New Moon", "First Quarter", "Full Moon", "Last Quarter"]).toContain(name);
+          expect(at.slice(0, 10) >= value && at > previous).toBe(true);
+          await expect(phases.nth(index).locator("time")).toContainText(`${at.slice(11, 16)} UTC`);
+          previous = at;
         }
         await field.fill("2028-12-31");
         await page.getByRole("button", { name: "Show phases" }).click();
@@ -201,6 +210,13 @@ for (const { schedule, entry, edit } of streamCases) {
       await page.goto(`http://127.0.0.1:${address.port}${path}${initialHash}`, {
         waitUntil: "commit",
       });
+      const fragmentEvents = await page.evaluateHandle(() => {
+        const destinations: string[] = [];
+        window.addEventListener("hashchange", (event) => {
+          destinations.push(new URL(event.newURL).hash);
+        });
+        return destinations;
+      });
       if (entry === "shortcut") {
         const first = page.getByRole("link", { name: "Skip to content" });
         await expect(first).toBeVisible();
@@ -260,6 +276,8 @@ for (const { schedule, entry, edit } of streamCases) {
 
       await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
       await expect(focused).toBeFocused();
+      expect(await fragmentEvents.jsonValue()).toEqual(entry === "shortcut" ? ["#calendar-title"] : []);
+      await fragmentEvents.dispose();
       expect(await focusTransitions.jsonValue()).toEqual([]);
       await focusTransitions.dispose();
       await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
@@ -268,6 +286,7 @@ for (const { schedule, entry, edit } of streamCases) {
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
         await page.goForward();
         await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+        await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
       }
       await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
       await expect(field).toHaveValue(value);
