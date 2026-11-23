@@ -53,6 +53,8 @@ Import the [OpenAPI 3.1.1 description](public/openapi.json), served by the app a
 
 For aggregate counts instead of site records, see the [catalog summary API guide](public/guides/catalog-summary.md), served by the app at `/guides/catalog-summary.md`.
 
+See the [route methods guide](public/guides/route-methods.md) for explicit handler exports, including the park redirect and calendar download.
+
 ## Verify a change
 
 ```sh
