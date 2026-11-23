@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Form from "next/form";
 import { Suspense } from "react";
+import { CalendarForm, CalendarSelection } from "./calendar-form";
 import { isPlannerDate, upcomingPhases } from "./phases";
 import styles from "./sky-notes.module.css";
 
@@ -18,33 +18,14 @@ const dayFormat = new Intl.DateTimeFormat("en", {
 const usno = "https://aa.usno.navy.mil/data/MoonPhases";
 type Query = Promise<{ date?: string | string[] }>;
 
-async function Calendar({ searchParams }: { searchParams: Query }) {
+async function CalendarResults({ searchParams }: { searchParams: Query }) {
   const { date: selection } = await searchParams;
-  const today = new Date().toISOString().slice(0, 10);
-  const date = selection ?? today;
+  const date = selection ?? new Date().toISOString().slice(0, 10);
   const valid = isPlannerDate(date);
 
   return (
-    <section className={styles.calendar} aria-labelledby="calendar-title">
-      <h2 id="calendar-title" tabIndex={-1}>Moon calendar</h2>
-      <Form action="/sky-notes" className={styles.dateForm}>
-        <div>
-          <label htmlFor="start-date">Starting date (UTC)</label>
-          <input
-            id="start-date"
-            name="date"
-            type="date"
-            key={valid ? date : "invalid"}
-            defaultValue={valid ? date : undefined}
-            min="1700-01-01"
-            max="2099-12-31"
-            required
-            aria-invalid={!valid}
-            aria-describedby={valid ? undefined : "invalid-date"}
-          />
-        </div>
-        <button type="submit">Show phases</button>
-      </Form>
+    <>
+      <CalendarSelection date={valid ? date : null} />
       {valid ? (
         <Suspense
           key={date}
@@ -61,7 +42,7 @@ async function Calendar({ searchParams }: { searchParams: Query }) {
           Choose a date from 1700 through 2099.
         </p>
       )}
-    </section>
+    </>
   );
 }
 
@@ -112,15 +93,22 @@ export default function SkyNotes({ searchParams }: { searchParams: Query }) {
         For faint stars, look for a clear, moonless stretch of night. Start with the Moon’s
         calendar.
       </p>
-      <Suspense
-        fallback={
-          <p className={styles.message} role="status">
-            Opening the Moon calendar…
-          </p>
-        }
-      >
-        <Calendar searchParams={searchParams} />
-      </Suspense>
+      <section className={styles.calendar} aria-labelledby="calendar-title">
+        <h2 id="calendar-title" tabIndex={-1}>
+          Moon calendar
+        </h2>
+        <CalendarForm>
+          <Suspense
+            fallback={
+              <p className={styles.message} role="status">
+                Looking up the Moon’s phases…
+              </p>
+            }
+          >
+            <CalendarResults searchParams={searchParams} />
+          </Suspense>
+        </CalendarForm>
+      </section>
       <section className={styles.field} aria-labelledby="field-title">
         <h2 id="field-title">In the field</h2>
         <div>

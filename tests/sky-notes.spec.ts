@@ -45,23 +45,39 @@ test("the calendar shortcut works on a fresh document without hydration", async 
   await expect(page.getByLabel("Starting date (UTC)")).toBeFocused();
 });
 
-test("a calendar in a hidden stream container does not expose the shortcut", async ({ page }) => {
+test("native keyboard navigation works with only the initial Sky notes shell", async ({ page }) => {
+  const path = "/sky-notes?date=2028-12-31";
   await page.route("**/_next/static/**/*.js", (route) => route.abort());
-  await page.goto("/sky-notes");
-  const heading = page.getByRole("heading", { name: "Moon calendar", exact: true });
-  // Model the streamed segment before React moves its contents out of the hidden wrapper.
-  await heading.evaluate((element) => {
-    const calendar = element.closest("section");
-    if (!calendar) throw new Error("Missing calendar section");
-    const segment = document.createElement("div");
-    segment.hidden = true;
-    calendar.before(segment);
-    segment.append(calendar);
+  await page.route(`**${path}`, async (route) => {
+    const response = await route.fetch();
+    const html = await response.text();
+    // Serve the real response up to, but not including, the first streamed segment.
+    const tail = html.search(/<div\b[^>]*\bid="S:[^"]+"/);
+    expect(tail).toBeGreaterThan(0);
+    await route.fulfill({
+      status: response.status(),
+      contentType: "text/html; charset=utf-8",
+      body: html.slice(0, tail),
+    });
   });
+  await page.goto(path, { waitUntil: "commit" });
+  const first = page.getByRole("link", { name: "Skip to content", exact: true });
+  await expect(first).toBeVisible();
+  await page.evaluate(() => document.documentElement.setAttribute("data-keyboard-test", "shell"));
+  const shortcut = page.getByRole("link", { name: "Skip to moon calendar", exact: true });
+
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Skip to content", exact: true })).toBeFocused();
+  await expect(first).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("link", { name: "Night Atlas home" })).toBeFocused();
+  await expect(shortcut).toBeFocused();
+  await expect(shortcut).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31#calendar-title$/);
+  await expect(page.locator("html")).toHaveAttribute("data-keyboard-test", "shell");
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("Starting date (UTC)")).toBeFocused();
+  await expect(page.getByRole("link", { name: "Download lunar calendar" })).toHaveCount(0);
 });
 
 test("the atlas keeps its original skip link before the masthead", async ({ page }) => {
@@ -76,8 +92,13 @@ test("the atlas keeps its original skip link before the masthead", async ({ page
 test("the moon calendar crosses year-end and rejects impossible dates", async ({ page }) => {
   await page.goto("/sky-notes?date=2028-02-30");
   await expect(page.getByText("Choose a date from 1700 through 2099.")).toBeVisible();
-  await page.getByLabel("Starting date (UTC)").fill("2028-12-31");
+  const date = page.getByLabel("Starting date (UTC)");
+  await expect(date).toHaveAttribute("aria-invalid", "true");
+  await expect(date).toHaveValue("");
+  await date.fill("2028-12-31");
   await page.getByRole("button", { name: "Show phases" }).click();
+  await expect(date).toHaveAttribute("aria-invalid", "false");
+  await expect(date).toHaveValue("2028-12-31");
   const phases = page.getByRole("list", { name: "Next four moon phases" }).getByRole("listitem");
   await expect(phases).toHaveCount(4);
   await expect(phases.first().locator("time")).toHaveAttribute("datetime", "2028-12-31T16:48:00Z");
