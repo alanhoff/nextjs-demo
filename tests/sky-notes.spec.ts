@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import { expect, test } from "@playwright/test";
 
 for (const width of [390, 1440]) {
@@ -123,7 +124,10 @@ for (const query of [
 }
 
 for (const value of ["2028-12-30", ""]) {
-  test(`a shell edit survives streaming and hydration (${value || "cleared"})`, async ({ page }) => {
+  test(`a shell edit survives streaming and hydration (${value || "cleared"})`, async ({
+    page,
+    request,
+  }) => {
     const path = "/sky-notes?date=2028-12-31";
     let releaseTail = () => {};
     let releaseBundles = () => {};
@@ -137,23 +141,41 @@ for (const value of ["2028-12-30", ""]) {
       await bundlesReady;
       await route.continue();
     });
-    await page.route("**/calendar-test-gate.js", async (route) => {
-      await tailReady;
-      await route.fulfill({ contentType: "application/javascript", body: "" });
+    // Hold actual document bytes, not just execution of an injected parser gate.
+    const response = await request.get(path);
+    const html = await response.text();
+    const tail = html.search(/<div\b[^>]*\bid="S:[^"]+"/);
+    expect(tail).toBeGreaterThan(0);
+    const server = createServer(async (incoming, outgoing) => {
+      try {
+        if (incoming.url === path && incoming.headers.rsc !== "1") {
+          outgoing.writeHead(response.status(), { "Content-Type": "text/html; charset=utf-8" });
+          outgoing.write(html.slice(0, tail));
+          await tailReady;
+          outgoing.end(html.slice(tail));
+          return;
+        }
+        const upstream = await request.get(incoming.url ?? "/", {
+          headers: Object.fromEntries(
+            Object.entries(incoming.headers).filter(
+              (entry): entry is [string, string] =>
+                typeof entry[1] === "string" && !["host", "connection"].includes(entry[0]),
+            ),
+          ),
+        });
+        outgoing.writeHead(upstream.status(), {
+          "Content-Type": upstream.headers()["content-type"] ?? "application/octet-stream",
+        });
+        outgoing.end(await upstream.body());
+      } catch {
+        outgoing.destroy();
+      }
     });
-    await page.route(`**${path}`, async (route) => {
-      const response = await route.fetch();
-      const html = await response.text();
-      const tail = html.search(/<div\b[^>]*\bid="S:[^"]+"/);
-      expect(tail).toBeGreaterThan(0);
-      await route.fulfill({
-        status: response.status(),
-        contentType: "text/html; charset=utf-8",
-        body: `${html.slice(0, tail)}<script src="/calendar-test-gate.js"></script>${html.slice(tail)}`,
-      });
-    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     try {
-      await page.goto(path, { waitUntil: "commit" });
+      const address = server.address();
+      if (!address || typeof address === "string") throw new Error("Expected a TCP test server");
+      await page.goto(`http://127.0.0.1:${address.port}${path}`, { waitUntil: "commit" });
       const first = page.getByRole("link", { name: "Skip to content" });
       await expect(first).toBeVisible();
       await page.keyboard.press("Tab");
@@ -161,16 +183,21 @@ for (const value of ["2028-12-30", ""]) {
       await page.keyboard.press("Tab");
       await expect(page.getByRole("link", { name: "Skip to moon calendar" })).toBeFocused();
       await page.keyboard.press("Enter");
+      await expect(page.getByRole("heading", { name: "Moon calendar", exact: true })).toBeFocused();
       await page.keyboard.press("Tab");
       const field = page.getByLabel("Starting date (UTC)");
       await expect(field).toBeFocused();
-      await field.fill(value || "2028-12-30");
-      if (!value) await field.fill("");
+      for (const digit of "12302028") await page.keyboard.press(digit);
+      await expect(field).toHaveValue("2028-12-30");
+      if (!value) await page.keyboard.press("Backspace");
+      await expect(field).toHaveValue(value);
+      await expect(field).toBeFocused();
       releaseTail();
       await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
       await expect(field).toHaveValue(value);
       await expect(field).toBeFocused();
       releaseBundles();
+      await page.waitForLoadState("load");
       await expect(field).toHaveAttribute("data-calendar-initialized", "true");
       await expect(field).toHaveValue(value);
       await expect(field).toBeFocused();
@@ -185,6 +212,8 @@ for (const value of ["2028-12-30", ""]) {
     } finally {
       releaseTail();
       releaseBundles();
+      server.close();
+      server.closeAllConnections();
     }
   });
 }

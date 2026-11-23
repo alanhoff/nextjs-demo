@@ -29,6 +29,31 @@ const initializeDate = `(() => {
   else field.removeAttribute('aria-describedby');
 })();`;
 
+// A fragment activated during parsing can be focused again when the document
+// finishes loading. Keep the user's later focus without changing hash history.
+const preserveCalendarFocus = `(() => {
+  const heading = document.getElementById('calendar-title');
+  const controller = new AbortController();
+  const options = { capture: true, signal: controller.signal };
+  let landed = false;
+  document.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('.calendar-skip-link')) landed = false;
+  }, options);
+  window.addEventListener('popstate', () => {
+    if (location.hash !== '#calendar-title') landed = false;
+  }, options);
+  heading.addEventListener('focus', (event) => {
+    if (location.hash !== '#calendar-title') return;
+    const previous = event.relatedTarget;
+    if (landed && previous instanceof HTMLElement && previous.isConnected) {
+      previous.focus({ preventScroll: true });
+      return;
+    }
+    landed = true;
+  }, options);
+  window.addEventListener('pageshow', () => controller.abort(), { once: true });
+})();`;
+
 async function CalendarResults({ searchParams }: { searchParams: Query }) {
   const { date: selection } = await searchParams;
   const date = selection ?? new Date().toISOString().slice(0, 10);
@@ -109,6 +134,7 @@ export default function SkyNotes({ searchParams }: { searchParams: Query }) {
         <h2 id="calendar-title" tabIndex={-1}>
           Moon calendar
         </h2>
+        <script>{preserveCalendarFocus}</script>
         <CalendarForm>
           <Suspense
             fallback={
