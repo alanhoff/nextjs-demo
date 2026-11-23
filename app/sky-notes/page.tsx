@@ -34,8 +34,23 @@ const initializeDate = `(() => {
 // without changing the URL, history, focus, or the region's accessible name.
 const preserveCalendarLanding = `(() => {
   const heading = document.getElementById('calendar-title');
-  if (!heading || document.readyState !== 'loading') return;
+  if (!heading) return;
   const hash = '#calendar-title';
+  // History restores scroll, but may not restore focus to the fragment target.
+  // Observe traversal only; ordinary activation is still entirely native.
+  let returningToCalendar = false;
+  window.navigation?.addEventListener('navigate', (event) => {
+    if (event.navigationType !== 'traverse') return;
+    returningToCalendar = event.hashChange && new URL(event.destination.url).hash === hash;
+  });
+  window.addEventListener('hashchange', () => {
+    const returning = returningToCalendar;
+    returningToCalendar = false;
+    if (returning && location.hash === hash && heading.isConnected) {
+      heading.focus({ preventScroll: true });
+    }
+  });
+  if (document.readyState !== 'loading') return;
   let leftLanding = false;
   const landed = () => { leftLanding = false; };
   const departed = () => { leftLanding = location.hash === hash; };

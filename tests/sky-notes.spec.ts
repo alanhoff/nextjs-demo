@@ -353,7 +353,8 @@ test("the moon calendar crosses year-end and rejects impossible dates", async ({
   await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
   await date.fill("2028-12-31");
   const submit = page.getByRole("button", { name: "Show phases" });
-  await page.keyboard.press("Tab");
+  // Filling a native date can set its value without moving keyboard focus.
+  await date.press("Tab");
   await expect(submit).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(date).toHaveAttribute("aria-invalid", "false");
