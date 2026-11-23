@@ -80,6 +80,115 @@ test("native keyboard navigation works with only the initial Sky notes shell", a
   await expect(page.getByRole("link", { name: "Download lunar calendar" })).toHaveCount(0);
 });
 
+for (const query of [
+  "",
+  "?date=2028-12-31",
+  "?date=2028-02-30",
+  "?date=not-a-date",
+  "?date=2100-01-01",
+  "?date=2028-12-31&date=2028-12-31",
+]) {
+  test(`the streamed native planner initializes without bundles (${query || "today"})`, async ({
+    page,
+  }) => {
+    await page.route("**/_next/static/**/*.js", (route) => route.abort());
+    const today = new Date().toISOString().slice(0, 10);
+    await page.goto(`/sky-notes${query}`);
+    const value = !query ? today : query === "?date=2028-12-31" ? "2028-12-31" : "";
+    const field = page.getByLabel("Starting date (UTC)");
+    await expect(field).toHaveValue(value);
+    await expect(field).toHaveJSProperty("defaultValue", value);
+    await expect(field).toHaveJSProperty("required", true);
+    await expect(field).toHaveAttribute("min", "1700-01-01");
+    await expect(field).toHaveAttribute("max", "2099-12-31");
+    await expect(field).toHaveAttribute("aria-invalid", String(!value));
+    const phases = page.getByRole("list", { name: "Next four moon phases" }).getByRole("listitem");
+    if (!value) {
+      await expect(field).toHaveAttribute("aria-describedby", "invalid-date");
+      await expect(page.locator("#invalid-date")).toHaveText("Choose a date from 1700 through 2099.");
+      await expect(page.locator("#invalid-date")).toBeVisible();
+      await expect(phases).toHaveCount(0);
+    } else {
+      await expect(field).not.toHaveAttribute("aria-describedby", /.+/);
+      if (query) {
+        await expect(phases).toHaveCount(4);
+      } else {
+        await field.fill("2028-12-31");
+        await page.getByRole("button", { name: "Show phases" }).click();
+        await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-31$/);
+        await expect(phases).toHaveCount(4);
+      }
+    }
+  });
+}
+
+for (const value of ["2028-12-30", ""]) {
+  test(`a shell edit survives streaming and hydration (${value || "cleared"})`, async ({ page }) => {
+    const path = "/sky-notes?date=2028-12-31";
+    let releaseTail = () => {};
+    let releaseBundles = () => {};
+    const tailReady = new Promise<void>((resolve) => {
+      releaseTail = resolve;
+    });
+    const bundlesReady = new Promise<void>((resolve) => {
+      releaseBundles = resolve;
+    });
+    await page.route("**/_next/static/**/*.js", async (route) => {
+      await bundlesReady;
+      await route.continue();
+    });
+    await page.route("**/calendar-test-gate.js", async (route) => {
+      await tailReady;
+      await route.fulfill({ contentType: "application/javascript", body: "" });
+    });
+    await page.route(`**${path}`, async (route) => {
+      const response = await route.fetch();
+      const html = await response.text();
+      const tail = html.search(/<div\b[^>]*\bid="S:[^"]+"/);
+      expect(tail).toBeGreaterThan(0);
+      await route.fulfill({
+        status: response.status(),
+        contentType: "text/html; charset=utf-8",
+        body: `${html.slice(0, tail)}<script src="/calendar-test-gate.js"></script>${html.slice(tail)}`,
+      });
+    });
+    try {
+      await page.goto(path, { waitUntil: "commit" });
+      const first = page.getByRole("link", { name: "Skip to content" });
+      await expect(first).toBeVisible();
+      await page.keyboard.press("Tab");
+      await expect(first).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(page.getByRole("link", { name: "Skip to moon calendar" })).toBeFocused();
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("Tab");
+      const field = page.getByLabel("Starting date (UTC)");
+      await expect(field).toBeFocused();
+      await field.fill(value || "2028-12-30");
+      if (!value) await field.fill("");
+      releaseTail();
+      await expect(field).toHaveJSProperty("defaultValue", "2028-12-31");
+      await expect(field).toHaveValue(value);
+      await expect(field).toBeFocused();
+      releaseBundles();
+      await page.waitForLoadState("load");
+      await expect(field).toHaveValue(value);
+      await expect(field).toBeFocused();
+
+      await page.evaluate(() => document.documentElement.setAttribute("data-planner-test", "same"));
+      await field.fill("2028-12-29");
+      await page.getByRole("button", { name: "Show phases" }).click();
+      await expect(page).toHaveURL(/\/sky-notes\?date=2028-12-29$/);
+      await expect(page.locator("html")).toHaveAttribute("data-planner-test", "same");
+      await expect(field).toHaveJSProperty("defaultValue", "2028-12-29");
+      await expect(field).toHaveValue("2028-12-29");
+    } finally {
+      releaseTail();
+      releaseBundles();
+    }
+  });
+}
+
 test("the atlas keeps its original skip link before the masthead", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("link", { name: "Skip to moon calendar", exact: true })).toHaveCount(0);
@@ -99,6 +208,8 @@ test("the moon calendar crosses year-end and rejects impossible dates", async ({
   await page.getByRole("button", { name: "Show phases" }).click();
   await expect(date).toHaveAttribute("aria-invalid", "false");
   await expect(date).toHaveValue("2028-12-31");
+  await expect(date).toHaveJSProperty("defaultValue", "2028-12-31");
+  await expect(date).not.toHaveAttribute("aria-describedby", /.+/);
   const phases = page.getByRole("list", { name: "Next four moon phases" }).getByRole("listitem");
   await expect(phases).toHaveCount(4);
   await expect(phases.first().locator("time")).toHaveAttribute("datetime", "2028-12-31T16:48:00Z");

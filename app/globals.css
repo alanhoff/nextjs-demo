@@ -76,12 +76,6 @@ h3 {
 .calendar-skip-link {
   position: fixed;
 }
-/* React streams the planner into a hidden container before revealing it.
-   Make the shortcut tabbable only when both the target and next stop are ready. */
-body:not(:has(#calendar-title:not([hidden], [hidden] *)):has(#start-date:not([hidden], [hidden] *)))
-  .calendar-skip-link {
-  display: none;
-}
 .skip-link:focus {
   top: 10px;
 }

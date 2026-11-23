@@ -18,6 +18,17 @@ const dayFormat = new Intl.DateTimeFormat("en", {
 const usno = "https://aa.usno.navy.mil/data/MoonPhases";
 type Query = Promise<{ date?: string | string[] }>;
 
+// Runs as the document parses the streamed selection, independently of hydration.
+// The browser updates the current value only if the input has not been edited.
+const initializeDate = `(() => {
+  const field = document.getElementById('start-date');
+  const date = document.currentScript.dataset.date;
+  field.defaultValue = date;
+  field.setAttribute('aria-invalid', String(!date));
+  if (!date) field.setAttribute('aria-describedby', 'invalid-date');
+  else field.removeAttribute('aria-describedby');
+})();`;
+
 async function CalendarResults({ searchParams }: { searchParams: Query }) {
   const { date: selection } = await searchParams;
   const date = selection ?? new Date().toISOString().slice(0, 10);
@@ -25,7 +36,8 @@ async function CalendarResults({ searchParams }: { searchParams: Query }) {
 
   return (
     <>
-      <CalendarSelection date={valid ? date : null} />
+      <script data-date={valid ? date : ""}>{initializeDate}</script>
+      <CalendarSelection date={valid ? date : null} query={JSON.stringify(selection ?? null)} />
       {valid ? (
         <Suspense
           key={date}

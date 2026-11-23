@@ -4,24 +4,31 @@ import Form from "next/form";
 import { createContext, type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import styles from "./sky-notes.module.css";
 
-const SelectionContext = createContext<(date: string | null) => void>(() => {});
+type Selection = { date: string | null; query: string };
+const SelectionContext = createContext<(selection: Selection) => void>(() => {});
 
 export function CalendarForm({ children }: { children: ReactNode }) {
-  const [date, setDate] = useState<string | null>();
+  const [selection, setSelection] = useState<Selection>();
   const input = useRef<HTMLInputElement>(null);
-  const previousDate = useRef<string | null | undefined>(undefined);
+  const previousQuery = useRef<string>(undefined);
 
   useEffect(() => {
-    if (date === undefined || !input.current) return;
+    if (!selection || !input.current) return;
     const field = input.current;
-    // Leave an edit made in the initial shell alone; later URL changes reset the field.
-    if (previousDate.current !== undefined || field.value === "") field.value = date ?? "";
+    const { date, query } = selection;
+    // Setting the default alone preserves the browser's dirty value, even if empty.
     field.defaultValue = date ?? "";
-    previousDate.current = date;
-  }, [date]);
+    if (previousQuery.current !== undefined && previousQuery.current !== query) {
+      field.value = date ?? "";
+    }
+    previousQuery.current = query;
+    field.setAttribute("aria-invalid", String(date === null));
+    if (date === null) field.setAttribute("aria-describedby", "invalid-date");
+    else field.removeAttribute("aria-describedby");
+  }, [selection]);
 
   return (
-    <SelectionContext.Provider value={setDate}>
+    <SelectionContext.Provider value={setSelection}>
       <Form action="/sky-notes" className={styles.dateForm}>
         <div>
           <label htmlFor="start-date">Starting date (UTC)</label>
@@ -33,8 +40,7 @@ export function CalendarForm({ children }: { children: ReactNode }) {
             max="2099-12-31"
             required
             ref={input}
-            aria-invalid={date === null}
-            aria-describedby={date === null ? "invalid-date" : undefined}
+            suppressHydrationWarning
           />
         </div>
         <button type="submit">Show phases</button>
@@ -45,8 +51,8 @@ export function CalendarForm({ children }: { children: ReactNode }) {
 }
 
 // Apply request-specific state without replacing the shell's focus target.
-export function CalendarSelection({ date }: { date: string | null }) {
-  const setDate = useContext(SelectionContext);
-  useEffect(() => setDate(date), [date, setDate]);
+export function CalendarSelection({ date, query }: Selection) {
+  const setSelection = useContext(SelectionContext);
+  useEffect(() => setSelection({ date, query }), [date, query, setSelection]);
   return null;
 }
