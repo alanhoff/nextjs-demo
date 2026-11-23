@@ -39,7 +39,12 @@ function preserveRouterState(event: MouseEvent<HTMLAnchorElement>) {
 
 export default function CalendarSkipLink() {
   return (
-    <a className="skip-link calendar-skip-link" href="#calendar-title" onClick={preserveRouterState}>
+    // biome-ignore lint/a11y/useValidAnchor: The anchor navigates to a real heading; the handler only preserves router history state.
+    <a
+      className="skip-link calendar-skip-link"
+      href="#calendar-title"
+      onClick={preserveRouterState}
+    >
       Skip to moon calendar
     </a>
   );
