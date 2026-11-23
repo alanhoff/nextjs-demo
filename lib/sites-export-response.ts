@@ -3,7 +3,7 @@ import { matchesIfNoneMatch } from "./etag";
 
 export function sitesExportResponse(
   request: Request,
-  format: "csv" | "geojson",
+  format: "csv" | "geojson" | "ndjson",
   body: string,
   headers: Record<string, string>,
 ) {
