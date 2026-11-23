@@ -74,8 +74,14 @@ test("planner history restores the search date after the keyboard shortcut", asy
   await expect(field).toBeFocused();
   for (const digit of "12312028") await page.keyboard.press(digit);
   await expect(field).toHaveValue("2028-12-31");
-  await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Show phases" })).toBeFocused();
+  const submit = page.getByRole("button", { name: "Show phases" });
+  // Native date inputs can consume Tab while moving between segments.
+  for (let tab = 0; tab < 5; tab++) {
+    await page.keyboard.press("Tab");
+    if (await submit.evaluate((button) => button === document.activeElement)) break;
+    await expect(field).toBeFocused();
+  }
+  await expect(submit).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(valid);
   await assertValid();
