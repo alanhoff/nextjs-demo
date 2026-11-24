@@ -70,12 +70,51 @@ test("nearby lists supported parameters for unknown query names", async ({ reque
     expect(response.status()).toBe(400);
     expect(response.headers()["content-type"]).toBe("application/json");
     const body = await response.json();
-    expect(body).toEqual({ error: "Supported parameters are lat, lon, limit, radius_km and view." });
+    expect(body).toEqual({ error: "Supported parameters are lat, lon, limit, radius_km, view and state." });
     const advertisedNames = body.error
       .slice("Supported parameters are ".length, -1)
       .split(/, | and /);
     expect(advertisedNames.sort()).toEqual([...declaredNames].sort());
   }
+});
+
+test("nearby filters by state before limiting identity results", async ({ request }) => {
+  const response = await request.get("/api/nearby?lat=34&lon=-116&state=Maine&limit=1&view=identity");
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({
+    sites: [{ slug: "acadia", code: "ACAD", name: "Acadia", distanceKm: 4215 }],
+  });
+});
+
+test("nearby combines state and radius without changing distance order", async ({ request }) => {
+  const california = "/api/nearby?lat=34&lon=-116&state=California";
+  const response = await request.get(california);
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({
+    sites: [{ slug: "joshua-tree", distanceKm: 16 }, { slug: "death-valley", distanceKm: 307 }],
+  });
+
+  const withinRadius = await request.get(`${california}&radius_km=100&limit=6`);
+  expect(withinRadius.status()).toBe(200);
+  expect(await withinRadius.json()).toEqual({ sites: [{ slug: "joshua-tree", distanceKm: 16 }] });
+
+  const outsideRadius = await request.get("/api/nearby?lat=34&lon=-116&state=Maine&radius_km=100");
+  expect(outsideRadius.status()).toBe(200);
+  expect(await outsideRadius.json()).toEqual({ sites: [] });
+});
+
+for (const state of ["", "maine", "Maine%20", "Atlantis"]) {
+  test(`nearby returns no sites for unmatched state ${JSON.stringify(state)}`, async ({ request }) => {
+    const response = await request.get(`/api/nearby?lat=34&lon=-116&state=${state}`);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual({ sites: [] });
+  });
+}
+
+test("nearby rejects repeated state parameters", async ({ request }) => {
+  const response = await request.get("/api/nearby?lat=34&lon=-116&state=Maine&state=California");
+  expect(response.status()).toBe(400);
+  expect(await response.json()).toEqual({ error: "Use state only once." });
 });
 
 for (const query of [

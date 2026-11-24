@@ -18,7 +18,8 @@
           { "name": "lon", "in": "query", "required": true, "description": "Longitude in degrees.", "schema": { "type": "number", "minimum": -180, "maximum": 180 } },
           { "name": "limit", "in": "query", "required": false, "description": "Maximum results; defaults to the current catalog size, which is also the upper bound.", "schema": { "type": "integer", "minimum": 1, "maximum": 6, "default": 6 } },
           { "name": "radius_km", "in": "query", "required": false, "description": "Maximum unrounded great-circle distance in kilometers, inclusive. Specify at most once.", "schema": { "type": "number", "exclusiveMinimum": 0 } },
-          { "name": "view", "in": "query", "required": false, "description": "Specify identity exactly once to include catalog code and name. Omit for slug and distance only.", "schema": { "type": "string", "enum": ["identity"] } }
+          { "name": "view", "in": "query", "required": false, "description": "Specify identity exactly once to include catalog code and name. Omit for slug and distance only.", "schema": { "type": "string", "enum": ["identity"] } },
+          { "name": "state", "in": "query", "required": false, "description": "Exact, case-sensitive, untrimmed full state name. Specify at most once; repeated state parameters return HTTP 400. An unmatched value returns no sites.", "schema": { "type": "string" } }
         ],
         "responses": {
           "200": { "description": "Sites sorted by ascending distance before rounding to whole kilometers.", "content": { "application/json": { "schema": {
