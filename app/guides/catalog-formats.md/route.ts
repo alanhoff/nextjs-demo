@@ -34,6 +34,40 @@ DEVA\t-117.116\t36.607
 
 Query options differ by route. JSON supports \`q\`, \`region\`, and \`state\` filters, \`limit\` and \`offset\` for paging, and \`view=summary\` for shorter records. The standalone CSV and GeoJSON routes filter by \`state\` and \`region\`, but do not support paging.
 
+## Page through California sites as CSV
+
+Unlike the standalone \`/api/sites.csv\` export, \`/api/sites\` returns paged CSV when you send \`Accept: text/csv\` and set a page size with \`limit\`. Request the first page with response headers:
+
+\`\`\`sh
+curl -fsS -i -H 'Accept: text/csv' "$BASE_URL/api/sites?state=California&limit=1"
+\`\`\`
+
+The response has \`X-Total-Count: 2\` (the total number of matching sites, not the page size) and this CSV body:
+
+\`\`\`csv
+code,slug,name
+JOTR,joshua-tree,Joshua Tree
+\`\`\`
+
+Follow the relative URL from the response's \`Link\` header with \`rel="next"\`: prepend your \`BASE_URL\` and send the same \`Accept\` header. Use the returned URL rather than calculating an offset yourself. For this response, the header is:
+
+\`\`\`text
+Link: </api/sites?state=California&offset=1&limit=1>; rel="next"
+\`\`\`
+
+\`\`\`sh
+curl -fsS -i -H 'Accept: text/csv' "$BASE_URL/api/sites?state=California&offset=1&limit=1"
+\`\`\`
+
+The second page still has \`X-Total-Count: 2\` and returns:
+
+\`\`\`csv
+code,slug,name
+DEVA,death-valley,Death Valley
+\`\`\`
+
+There is no next link on this page, so stop here.
+
 ## Stream California sites
 
 Omit \`state\` to stream the entire catalog. Supply one exact, case-sensitive state name to stream only that state's sites. An unmatched or empty \`state\` returns no records. Repeating \`state\` is rejected.

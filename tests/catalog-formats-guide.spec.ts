@@ -69,6 +69,37 @@ test("the California streaming example matches the live NDJSON export", async ({
   expect(example?.[2]).toBe(codes.join("\n"));
 });
 
+test("the California CSV example follows the live next link", async ({ request }) => {
+  const response = await request.get(guidePath);
+  expect(response.status()).toBe(200);
+  const guide = await response.text();
+  const example = guide.split("## Page through California sites as CSV\n")[1]?.split("\n## ")[0];
+  const headers = { Accept: "text/csv" };
+  const firstPath = "/api/sites?state=California&limit=1";
+  const first = await request.get(firstPath, { headers });
+  const link = first.headers().link;
+  expect(link).toBe('</api/sites?state=California&offset=1&limit=1>; rel="next"');
+  expect(example).toContain(`Link: ${link}`);
+  const nextPath = link.slice(1, link.indexOf(">"));
+  const second = await request.get(nextPath, { headers });
+  expect(second.headers().link).toBeUndefined();
+  expect(example).toContain("There is no next link");
+
+  for (const [path, page, row] of [
+    [firstPath, first, "JOTR,joshua-tree,Joshua Tree"],
+    [nextPath, second, "DEVA,death-valley,Death Valley"],
+  ] as const) {
+    expect(page.status()).toBe(200);
+    expect(page.headers()["content-type"]).toMatch(/^text\/csv\b/);
+    expect(page.headers()["x-total-count"]).toBe("2");
+    expect(example).toContain(`curl -fsS -i -H 'Accept: text/csv' "$BASE_URL${path}"`);
+    const body = (await page.text()).trimEnd().replace(/\r\n/g, "\n");
+    expect(body).toBe(`code,slug,name\n${row}`);
+    expect(example).toContain(`\`\`\`csv\n${body}\n\`\`\``);
+  }
+  expect(example).toContain("X-Total-Count: 2");
+});
+
 test("the full guide ignores tracking parameters and supports HEAD", async ({ request }) => {
   const full = await request.get(guidePath);
   const tracked = await request.get(`${guidePath}?utm_source=atlas`);
