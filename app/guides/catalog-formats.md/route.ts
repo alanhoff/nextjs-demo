@@ -32,7 +32,22 @@ JOTR\t-116.168\t34.011
 DEVA\t-117.116\t36.607
 \`\`\`
 
-Query options differ by route. JSON supports \`q\`, \`region\`, and \`state\` filters, \`limit\` and \`offset\` for paging, and \`view=summary\` for shorter records. The standalone CSV and GeoJSON routes filter by \`state\` and \`region\`, but do not support paging. NDJSON always returns the full catalog and ignores query filters.
+Query options differ by route. JSON supports \`q\`, \`region\`, and \`state\` filters, \`limit\` and \`offset\` for paging, and \`view=summary\` for shorter records. The standalone CSV and GeoJSON routes filter by \`state\` and \`region\`, but do not support paging.
+
+## Stream California sites
+
+Omit \`state\` to stream the entire catalog. Supply one exact, case-sensitive state name to stream only that state's sites. An unmatched or empty \`state\` returns no records. Repeating \`state\` is rejected.
+
+Use \`curl\` and \`jq\` to print one site code per line:
+
+\`\`\`sh
+curl -fsS "$BASE_URL/api/sites.ndjson?state=California" | jq -r '.code'
+\`\`\`
+
+\`\`\`text
+JOTR
+DEVA
+\`\`\`
 `;
 
 export function GET(request: Request) {

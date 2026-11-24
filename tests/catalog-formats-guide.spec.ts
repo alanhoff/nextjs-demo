@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 test("the catalog formats guide matches live export discovery", async ({ request }) => {
@@ -46,15 +45,38 @@ test("the California example matches the live GeoJSON export", async ({ request 
 
 const guidePath = "/guides/catalog-formats.md";
 
-test("the full guide preserves its original bytes and supports HEAD", async ({ request }) => {
-  for (const query of ["", "?utm_source=atlas"]) {
-    const response = await request.get(`${guidePath}${query}`);
+test("the California streaming example matches the live NDJSON export", async ({ request }) => {
+  const response = await request.get(guidePath);
+  expect(response.status()).toBe(200);
+  const guide = await response.text();
+  expect(guide).not.toContain("NDJSON always returns the full catalog and ignores query filters.");
+  const example = guide.match(/^## Stream California sites\n([\s\S]*?)^```text\n([\s\S]*?)\n```$/m);
+  expect(example?.[1]).toContain(
+    "Omit `state` to stream the entire catalog. Supply one exact, case-sensitive state name to stream only that state's sites. An unmatched or empty `state` returns no records. Repeating `state` is rejected.",
+  );
+  const path = "/api/sites.ndjson?state=California";
+  expect(example?.[1]).toContain(`\`\`\`sh\ncurl -fsS "$BASE_URL${path}" | jq -r '.code'\n\`\`\``);
+
+  const ndjson = await request.get(path);
+  expect(ndjson.status()).toBe(200);
+  expect(ndjson.headers()["content-type"]).toBe("application/x-ndjson");
+  const lines = (await ndjson.text()).split("\n");
+  expect(lines.pop()).toBe("");
+  const records = lines.map((line) => JSON.parse(line));
+  expect(records.map(({ state }) => state)).toEqual(["California", "California"]);
+  const codes = records.map(({ code }) => code);
+  expect(codes).toEqual(["JOTR", "DEVA"]);
+  expect(example?.[2]).toBe(codes.join("\n"));
+});
+
+test("the full guide ignores tracking parameters and supports HEAD", async ({ request }) => {
+  const full = await request.get(guidePath);
+  const tracked = await request.get(`${guidePath}?utm_source=atlas`);
+  for (const response of [full, tracked]) {
     expect(response.status()).toBe(200);
     expect(response.headers()["content-type"]).toMatch(/^text\/markdown\b/);
-    expect(createHash("sha256").update(await response.body()).digest("hex")).toBe(
-      "afa796e7538b2a2cef67cb4e8f9b966183ae8d2bd6c072b804628cb4d33c1e6c",
-    );
   }
+  expect(await tracked.body()).toEqual(await full.body());
 
   const head = await request.head(guidePath);
   expect(head.status()).toBe(200);
