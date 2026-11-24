@@ -70,7 +70,7 @@ test("nearby lists supported parameters for unknown query names", async ({ reque
     expect(response.status()).toBe(400);
     expect(response.headers()["content-type"]).toBe("application/json");
     const body = await response.json();
-    expect(body).toEqual({ error: "Supported parameters are lat, lon, limit, radius_km, view and state." });
+    expect(body).toEqual({ error: "Supported parameters are lat, lon, limit, radius_km, view, state and exclude." });
     const advertisedNames = body.error
       .slice("Supported parameters are ".length, -1)
       .split(/, | and /);
@@ -101,6 +101,38 @@ test("nearby combines state and radius without changing distance order", async (
   const outsideRadius = await request.get("/api/nearby?lat=34&lon=-116&state=Maine&radius_km=100");
   expect(outsideRadius.status()).toBe(200);
   expect(await outsideRadius.json()).toEqual({ sites: [] });
+});
+
+test("nearby excludes an exact slug before limiting identity results", async ({ request }) => {
+  const response = await request.get(
+    "/api/nearby?lat=34&lon=-116&state=California&exclude=joshua-tree&limit=1&view=identity",
+  );
+  expect(response.status()).toBe(200);
+  expect(await response.json()).toEqual({
+    sites: [{ slug: "death-valley", code: "DEVA", name: "Death Valley", distanceKm: 307 }],
+  });
+});
+
+for (const query of ["exclude=joshua-tree&radius_km=100", "state=Maine&exclude=acadia"]) {
+  test(`nearby combines exclusion with filters: ${query}`, async ({ request }) => {
+    const response = await request.get(`/api/nearby?lat=34&lon=-116&${query}`);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual({ sites: [] });
+  });
+}
+
+for (const exclude of ["", "JOSHUA-TREE", "%20joshua-tree%20", "not-a-catalog-slug"]) {
+  test(`nearby ignores unmatched exclude ${JSON.stringify(exclude)}`, async ({ request }) => {
+    const response = await request.get(`/api/nearby?lat=34&lon=-116&exclude=${exclude}&limit=1`);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual({ sites: [{ slug: "joshua-tree", distanceKm: 16 }] });
+  });
+}
+
+test("nearby rejects repeated exclude parameters", async ({ request }) => {
+  const response = await request.get("/api/nearby?lat=34&lon=-116&exclude=acadia&exclude=joshua-tree");
+  expect(response.status()).toBe(400);
+  expect(await response.json()).toEqual({ error: "Use exclude only once." });
 });
 
 for (const state of ["", "maine", "Maine%20", "Atlantis"]) {

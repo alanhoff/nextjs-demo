@@ -26,9 +26,9 @@ function coordinate(value: string | null, max: number) {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   for (const key of params.keys()) {
-    if (!["lat", "lon", "limit", "radius_km", "view", "state"].includes(key)) {
+    if (!["lat", "lon", "limit", "radius_km", "view", "state", "exclude"].includes(key)) {
       return Response.json(
-        { error: "Supported parameters are lat, lon, limit, radius_km, view and state." },
+        { error: "Supported parameters are lat, lon, limit, radius_km, view, state and exclude." },
         { status: 400 },
       );
     }
@@ -67,8 +67,9 @@ export async function GET(request: Request) {
   }
 
   const stateFilter = params.get("state");
+  const excludedSlug = params.get("exclude");
   const sites = catalog
-    .filter(({ state }) => stateFilter === null || state === stateFilter)
+    .filter(({ slug, state }) => slug !== excludedSlug && (stateFilter === null || state === stateFilter))
     .map(({ slug, code, name, coordinates }) => ({ slug, code, name, distanceKm: distanceKm(lat, lon, coordinates) }))
     .filter(({ distanceKm }) => radiusKm === null || distanceKm <= radiusKm)
     .sort((a, b) => a.distanceKm - b.distanceKm)
