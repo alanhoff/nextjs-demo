@@ -71,7 +71,10 @@ test("static site endpoints take precedence over the slug route", async ({ reque
   for (const [segment, body] of [
     ["summary", { total: 6 }],
     ["exports", { catalog: "night-atlas", formats: expect.any(Array) }],
-    ["status", { catalog: "night-atlas", site_count: 6, generated_at: expect.any(String) }],
+    [
+      "status",
+      { catalog: "night-atlas", site_count: 6, state_count: 5, generated_at: expect.any(String) },
+    ],
   ] as const) {
     const response = await request.get(`/api/sites/${segment}`);
     expect(response.status()).toBe(200);

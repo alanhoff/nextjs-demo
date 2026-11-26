@@ -3,13 +3,15 @@ import { expect, test } from "@playwright/test";
 
 const timestampShape = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
-test("sites status reports the full catalog and generates a fresh UTC timestamp", async ({
+test("sites status reports the full catalog, distinct state count, and generates a fresh UTC timestamp", async ({
   request,
 }) => {
   const catalog = await request.get("/api/sites");
   expect(catalog.status()).toBe(200);
   const { sites } = await catalog.json();
   expect(sites).toHaveLength(6);
+  const states = new Set(sites.map((site: { state: string }) => site.state));
+  expect(states.size).toBe(5);
 
   async function readStatusTimestamp() {
     const startedAt = Date.now();
@@ -22,6 +24,7 @@ test("sites status reports the full catalog and generates a fresh UTC timestamp"
     expect(body).toEqual({
       catalog: "night-atlas",
       site_count: sites.length,
+      state_count: states.size,
       generated_at: expect.stringMatching(timestampShape),
     });
     const timestamp = Date.parse(body.generated_at);

@@ -6,7 +6,12 @@ export async function GET() {
   const sites = await getSites();
 
   return Response.json(
-    { catalog: "night-atlas", site_count: sites.length, generated_at: new Date().toISOString() },
+    {
+      catalog: "night-atlas",
+      site_count: sites.length,
+      state_count: new Set(sites.map((site) => site.state)).size,
+      generated_at: new Date().toISOString(),
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }
