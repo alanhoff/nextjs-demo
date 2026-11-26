@@ -74,6 +74,9 @@ test("published OpenAPI describes exactly the explicit API handlers", async ({ r
   for (const status of ["200", "304", "400"]) {
     expect(catalog.head.responses[status]).not.toHaveProperty("content");
   }
+  const status = spec.paths["/api/sites/status"].get.responses["200"].content["application/json"].schema;
+  expect(status.required).toEqual(["catalog", "site_count", "state_count", "generated_at"]);
+  expect(status.properties.state_count).toMatchObject({ type: "integer", minimum: 0 });
   expect(spec.paths["/api/nearby"].get.parameters.filter(({ required }: { required: boolean }) => required).map(({ name }: { name: string }) => name)).toEqual(["lat", "lon"]);
   expect(spec.paths["/api/nearby"].get.parameters[3]).toMatchObject({
     name: "radius_km",
