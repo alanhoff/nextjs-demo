@@ -10,6 +10,7 @@ export async function GET() {
       catalog: "night-atlas",
       site_count: sites.length,
       state_count: new Set(sites.map((site) => site.state)).size,
+      region_count: new Set(sites.map((site) => site.region)).size,
       generated_at: new Date().toISOString(),
     },
     { headers: { "Cache-Control": "no-store" } },

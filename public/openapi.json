@@ -199,9 +199,9 @@
         "operationId": "getSiteStatus",
         "tags": ["Catalog"],
         "summary": "Read the current catalog status",
-        "responses": { "200": { "description": "Catalog identifier, site count, distinct state count, and timestamp generated for this request.", "headers": { "Cache-Control": { "$ref": "#/components/headers/NoStore" } }, "content": { "application/json": { "schema": {
-          "type": "object", "required": ["catalog", "site_count", "state_count", "generated_at"], "properties": {
-            "catalog": { "const": "night-atlas" }, "site_count": { "type": "integer", "minimum": 0 }, "state_count": { "type": "integer", "minimum": 0, "description": "Number of distinct U.S. state names across the complete catalog. Each state counts once regardless of how many sites it has." }, "generated_at": { "type": "string", "format": "date-time" }
+        "responses": { "200": { "description": "Catalog identifier, site count, distinct state count, distinct region count, and timestamp generated for this request.", "headers": { "Cache-Control": { "$ref": "#/components/headers/NoStore" } }, "content": { "application/json": { "schema": {
+          "type": "object", "required": ["catalog", "site_count", "state_count", "region_count", "generated_at"], "properties": {
+            "catalog": { "const": "night-atlas" }, "site_count": { "type": "integer", "minimum": 0 }, "state_count": { "type": "integer", "minimum": 0, "description": "Number of distinct U.S. state names across the complete catalog. Each state counts once regardless of how many sites it has." }, "region_count": { "type": "integer", "minimum": 0, "description": "Number of distinct region values across the complete catalog." }, "generated_at": { "type": "string", "format": "date-time" }
           }
         } } } } }
       }
